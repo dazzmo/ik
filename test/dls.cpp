@@ -58,6 +58,23 @@ TEST(ik, AddCentreOfMassTask) {
     dls(ik, pinocchio::randomConfiguration(model));
 }
 
+TEST(ik, AddSE3Task) {
+    // Load a model
+    const std::string urdf_filename = "ur5.urdf";
+    pinocchio::Model model;
+    pinocchio::urdf::buildModel(urdf_filename, model);
+
+    std::shared_ptr<ik::SE3Task> task =
+        std::make_shared<ik::SE3Task>(model, "ee_fixed_joint", "universe");
+
+    ik::ik ik(model);
+    ik.add_se3_task("task", task);
+    ik.get_se3_task("task")->reference.pose.setRandom();
+
+    // Solve
+    dls(ik, pinocchio::randomConfiguration(model));
+}
+
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);

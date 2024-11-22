@@ -51,6 +51,20 @@ class ik {
         return nullptr;
     }
 
+        void add_se3_task(const std::string &name,
+                              std::shared_ptr<SE3Task> &task) {
+        se3_tasks_map_.insert({name, se3_tasks_.size()});
+        se3_tasks_.push_back(task);
+    }
+
+    std::shared_ptr<SE3Task> get_se3_task(
+        const string_t &name) {
+        if (se3_tasks_map_.find(name) != se3_tasks_map_.end()) {
+            return se3_tasks_[se3_tasks_map_.at(name)];
+        }
+        return nullptr;
+    }
+
     void add_centre_of_mass_task(std::shared_ptr<CentreOfMassTask> &task) {
         com_task_ = task;
     }
@@ -76,13 +90,13 @@ class ik {
    private:
     std::vector<std::shared_ptr<PositionTask>> position_tasks_;
     std::vector<std::shared_ptr<OrientationTask>> orientation_tasks_;
-    // std::vector<std::shared_ptr<SE3Task>> se3_tasks_;
+    std::vector<std::shared_ptr<SE3Task>> se3_tasks_;
 
     std::shared_ptr<CentreOfMassTask> com_task_ = nullptr;
 
     std::unordered_map<string_t, std::size_t> position_tasks_map_;
     std::unordered_map<string_t, std::size_t> orientation_tasks_map_;
-    // std::unordered_map<string_t, std::size_t> se3_tasks_map_;
+    std::unordered_map<string_t, std::size_t> se3_tasks_map_;
 
     // Initialisation flag
     bool is_initialised_ = false;

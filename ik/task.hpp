@@ -231,48 +231,63 @@ class CentreOfMassTask : public Task<double, std::size_t> {
    private:
 };
 
-// class SE3Task : public Task<double, std::size_t> {
-//    public:
-//     SE3Task(const model_t &model, const std::string &target_frame,
-//             const std::string &reference_frame);
+class SE3Task : public Task<double, std::size_t> {
+   public:
+    SE3Task(const model_t &model, const std::string &frame_name,
+            const std::string &reference_frame)
+        : Task<double, std::size_t>(6, model),
+          target_frame(frame_name),
+          reference_frame(reference_frame) {}
 
-//     typedef pinocchio::SE3 se3_t;
-//     typedef pinocchio::Motion twist_t;
+    typedef pinocchio::SE3 se3_t;
+    typedef pinocchio::Motion twist_t;
 
-//     struct task_state {
-//         se3_t pose;
-//     };
+    struct task_state {
+        se3_t pose;
+    };
 
-//     struct error_state {
-//         twist_t twist;
-//     };
+    struct error_state {
+        twist_t twist;
+    };
 
-//     typedef task_state task_state_t;
-//     typedef error_state error_state_t;
-//     typedef task_state_t reference_t;
+    typedef task_state task_state_t;
+    typedef error_state task_error_t;
+    typedef error_state task_tolerance_t;
+    typedef task_state_t reference_t;
 
-//     integer_type get_task_state(const model_t &model, data_t &data,
-//                                 task_state_t &task_state) const {
-//         task_state.pose = data.oMf[model.getFrameId(reference_frame)].actInv(
-//             data.oMf[model.getFrameId(target_frame)]);
-//         return integer_type(0);
-//     }
+    void compute_error(const model_t &model, data_t &data,
+                       Eigen::Ref<eigen_vector_t> e) override {
+        // Compute task state
+        state.pose = data.oMf[model.getFrameId(reference_frame)].actInv(
+            data.oMf[model.getFrameId(target_frame)]);
 
-//     integer_type get_task_error(const task_state_t &task_state,
-//                                 task_error_t &error,
-//                                 const value_type &dt = 0.0) const {
-//         Eigen::Matrix<double, 6, 6> Jlog;
-//         error.positional =
-//             pinocchio::log6(reference.pose.actInv(task_state.pose)).toVector();
-//         pinocchio::Jlog6(reference.pose.actInv(task_state.pose), Jlog);
-//         return integer_type(0);
-//     }
+        // Compute task error
+        error.twist = pinocchio::log6(reference.pose.actInv(state.pose));
+        // Set error
+        e = error.twist.toVector();
+    }
 
-//     reference_t reference;
-//     string_t target_frame;
-//     string_t reference_frame;
+    void compute_jacobian(const model_t &model, data_t &data,
+                          Eigen::Ref<eigen_matrix_t> jac) override {
+        pinocchio::getFrameJacobian(model, data, model.getFrameId(target_frame),
+                                    pinocchio::WORLD, frame_jacobian_);
+        Eigen::Matrix<double, 6, 6> Jlog;
+        pinocchio::Jlog6(reference.pose.actInv(state.pose), Jlog);
+        jac = data.oMf[model.getFrameId(reference_frame)]
+                  .toActionMatrixInverse() *
+              frame_jacobian_;
+    }
 
-//    private:
-// };
+    reference_t reference;
+
+    task_state_t state;
+    task_error_t error;
+    task_tolerance_t tolerance;
+
+    string_t target_frame;
+    string_t reference_frame;
+
+   private:
+};
 
 }  // namespace ik
