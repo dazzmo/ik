@@ -6,10 +6,10 @@
 <br>
 <div align="center">
 
-  <h1 align="center">Operational Space Controller</h1>
+  <h1 align="center">Puppeteer - An Inverse Kinematics Engine</h1>
 
   <p align="left">
-    A work-in-progress implementation of a basic low-level operational space control used for whole body task-space control of articulated robotic systems subject to contact.
+    A work-in-progress implementation of a basic inverse kinematics engine
   </p>
 </div>
 
@@ -25,10 +25,7 @@
 
 ### Prerequisites
 ik requires the following third-party libraries in order to be built and installed.
-* [boost](https://www.boost.org/) (Version 1.70 or higher)
-* [bopt]()
 * [pinocchio]()
-* [casadi]()
 
 For testing purposes we have (this is later be a toggle-able option):
 * [googletest](https://github.com/google/googletest)

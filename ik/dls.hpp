@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2024
  *
  */
+#include <pinocchio/algorithm/center-of-mass.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
 #include "ik/ik.hpp"
@@ -29,7 +30,7 @@ void apply_joint_clipping(const model_t &model, eigen_vector_t &q) {
 
 // todo - priority version
 
-void dls(
+eigen_vector_t dls(
     ik &ik, const eigen_vector_t &q0,
     const inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
     const dls_parameters &p = dls_parameters()) {
@@ -44,44 +45,36 @@ void dls(
 
     // todo - if limited convergence, try random walk
 
+    auto tasks = ik.get_all_tasks();
+
     // Perform iterations
     for (std::size_t i = 0; i < p.max_iterations; ++i) {
         // Update model
         pinocchio::framesForwardKinematics(ik.model, data, q);
         pinocchio::computeJointJacobians(ik.model, data);
-        
+        pinocchio::jacobianCenterOfMass(ik.model, data, q, false);
+
         std::size_t cnt = 0;
-        // Evaluate error and jacobian
-        for (auto &task : ik.get_position_tasks()) {
-            e.middleRows(cnt, 3) =
-                get_task_error(ik.model, data, *task.second).position;
-            task.second->get_task_jacobian(ik.model, data,
-                                           J.middleRows(cnt, 3));
-            cnt += 3;
+        for (auto &task : tasks) {
+            VLOG(10) << "e = " << e;
+            task->compute_error(ik.model, data,
+                                e.middleRows(cnt, task->dimension()));
+            VLOG(10) << "J = " << J;
+            task->compute_jacobian(ik.model, data,
+                                   J.middleRows(cnt, task->dimension()));
+            cnt += task->dimension();
         }
 
-        // for (auto &task : ik.get_orientation_tasks()) {
-        //     e.middleRows(cnt, 3) =
-        //         get_task_error(ik.model, *task.second).position;
-        //     J.middleRows(cnt, 3) = task.second->get_task_jacobian();
-        //     cnt += 3;
-        // }
-
-        // for (auto &task : ik.get_se3_tasks()) {
-        //     e.middleRows(cnt, 6) =
-        //         get_task_error(ik.model, *task.second).twist.asVector();
-        //     J.middleRows(cnt, 6) = task.second->get_task_jacobian();
-        //     cnt += 6;
-        // }
-
-        // Other tasks ...
+        if (visitor.should_stop(ik, dq)) {
+            return q;
+        }
 
         // Estimate hessian of cost
         JJ.noalias() = J.transpose() * J;
         JJ.diagonal().array() += p.damping * p.damping;
         // Compute step direction
         dq = -JJ.ldlt().solve(J.transpose() * e);
-        
+
         VLOG(10) << "dls: it = " << i;
         VLOG(10) << "dls: J = " << J;
         VLOG(10) << "dls: q = " << q.transpose();
@@ -91,15 +84,12 @@ void dls(
         // Take a step
         q = pinocchio::integrate(ik.model, q, p.step_length * dq);
 
-        if (visitor.should_stop(ik, dq)) {
-            return;
-        }
-
         apply_joint_clipping(ik.model, q);
 
         // If issues, perform random restart
     }
 
+    return q0;
     // If it didn't converge, try a random restart?
 }
 

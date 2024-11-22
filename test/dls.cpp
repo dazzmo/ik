@@ -22,10 +22,40 @@ TEST(ik, AddPositionTask) {
     
     // Solve
     dls(ik, pinocchio::randomConfiguration(model));
+}
 
-    ik.get_position_task("ee")->reference.position << 0.5, 0.5, 0.5;
-    dls(ik, pinocchio::randomConfiguration(model));
+TEST(ik, AddOrientationTask) {
+    // Load a model
+    const std::string urdf_filename = "ur5.urdf";
+    pinocchio::Model model;
+    pinocchio::urdf::buildModel(urdf_filename, model);
+
+    std::shared_ptr<ik::OrientationTask> task =
+        std::make_shared<ik::OrientationTask>(model, "ee_fixed_joint", "universe");
+
+    ik::ik ik(model);
+    ik.add_orientation_task("ee", task);
+    ik.get_orientation_task("ee")->reference.rotation.setIdentity();
     
+    // Solve
+    dls(ik, pinocchio::randomConfiguration(model));
+}
+
+TEST(ik, AddCentreOfMassTask) {
+    // Load a model
+    const std::string urdf_filename = "ur5.urdf";
+    pinocchio::Model model;
+    pinocchio::urdf::buildModel(urdf_filename, model);
+
+    std::shared_ptr<ik::CentreOfMassTask> task =
+        std::make_shared<ik::CentreOfMassTask>(model, "universe");
+
+    ik::ik ik(model);
+    ik.add_centre_of_mass_task(task);
+    ik.get_centre_of_mass_task()->reference.position << 0.0, 0.0, 0.3;
+    
+    // Solve
+    dls(ik, pinocchio::randomConfiguration(model));
 }
 
 int main(int argc, char **argv) {

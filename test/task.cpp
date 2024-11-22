@@ -6,13 +6,22 @@
 
 #include <pinocchio/parsers/urdf.hpp>
 
-TEST(Task, Construct) {
+TEST(Task, PositionTask) {
     const std::string urdf_filename = "ur5.urdf";
     // Load the urdf model
     pinocchio::Model model;
     pinocchio::urdf::buildModel(urdf_filename, model);
 
     ik::PositionTask task(model, "ee_fixed_joint", "universe");
+}
+
+TEST(Task, PositionTask) {
+    const std::string urdf_filename = "ur5.urdf";
+    // Load the urdf model
+    pinocchio::Model model;
+    pinocchio::urdf::buildModel(urdf_filename, model);
+
+    ik::OrientationTask task(model, "ee_fixed_joint", "universe");
 }
 
 int main(int argc, char **argv) {

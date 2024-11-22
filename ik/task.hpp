@@ -47,13 +47,23 @@ class Task {
     typedef int integer_type;
 
     Task(const index_type &dimension, const model_t &model)
-        : dimension_(dimension), model_nq_(model.nq), model_nv_(model.nv) {}
+        : dimension_(dimension), model_nq_(model.nq), model_nv_(model.nv) {
+        frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
+    }
+
+    virtual void compute_error(const model_t &model, data_t &data,
+                               Eigen::Ref<eigen_vector_t> e) = 0;
+    virtual void compute_jacobian(const model_t &model, data_t &data,
+                                  Eigen::Ref<eigen_matrix_t> jac) = 0;
 
     index_type priority() { return 0; }
 
     index_type dimension() const { return dimension_; }
     index_type model_nq() const { return model_nq_; }
     index_type model_nv() const { return model_nv_; }
+
+   protected:
+    pinocchio::Data::Matrix6x frame_jacobian_;
 
    private:
     // Dimension of the task
@@ -72,9 +82,7 @@ class PositionTask : public Task<double, std::size_t> {
                  const std::string &reference_frame)
         : Task<double, std::size_t>(3, model),
           target_frame(frame_name),
-          reference_frame(reference_frame) {
-        frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
-    }
+          reference_frame(reference_frame) {}
 
     struct task_state {
         eigen_vector3_t position = eigen_vector3_t::Zero();
@@ -85,134 +93,143 @@ class PositionTask : public Task<double, std::size_t> {
     typedef task_state task_tolerance_t;
     typedef task_state_t reference_t;
 
-    integer_type get_task_state(const model_t &model, const data_t &data,
-                                task_state_t &task_state) const {
-        task_state.position =
-            data.oMf[model.getFrameId(reference_frame)]
-                .actInv(data.oMf[model.getFrameId(target_frame)])
-                .translation();
-        return integer_type(0);
+    void compute_error(const model_t &model, data_t &data,
+                       Eigen::Ref<eigen_vector_t> e) override {
+        // Compute task state
+        state.position = data.oMf[model.getFrameId(reference_frame)]
+                             .actInv(data.oMf[model.getFrameId(target_frame)])
+                             .translation();
+        // Compute task error
+        error.position = state.position - reference.position;
+        // Set error
+        e = error.position;
     }
 
-    integer_type get_task_jacobian(const model_t &model, data_t &data,
-                                   Eigen::Ref<eigen_matrix_t> jacobian) {
+    void compute_jacobian(const model_t &model, data_t &data,
+                          Eigen::Ref<eigen_matrix_t> jac) override {
         pinocchio::getFrameJacobian(model, data, model.getFrameId(target_frame),
                                     pinocchio::WORLD, frame_jacobian_);
-        VLOG(10) << "get_task_jacobian: J " << frame_jacobian_;
-        jacobian = (data.oMf[model.getFrameId(reference_frame)]
-                        .toActionMatrixInverse() *
-                    frame_jacobian_)
-                       .topRows(3);
-
-        return integer_type(0);
-    }
-
-    integer_type get_task_error(const task_state_t &task_state,
-                                task_error_t &error) const {
-        error.position = task_state.position - reference.position;
-        return integer_type(0);
+        jac = (data.oMf[model.getFrameId(reference_frame)]
+                   .toActionMatrixInverse() *
+               frame_jacobian_)
+                  .topRows(3);
     }
 
     reference_t reference;
+
+    task_state_t state;
+    task_error_t error;
     task_tolerance_t tolerance;
 
     string_t target_frame;
     string_t reference_frame;
 
    private:
-    pinocchio::Data::Matrix6x frame_jacobian_;
 };
 
-// class OrientationTask : public Task<double, std::size_t> {
-//    public:
-//     OrientationTask(const model_t &model, const std::string &frame_name,
-//                     const std::string &reference_frame);
+class OrientationTask : public Task<double, std::size_t> {
+   public:
+    OrientationTask(const model_t &model, const std::string &frame_name,
+                    const std::string &reference_frame)
+        : Task<double, std::size_t>(3, model),
+          target_frame(frame_name),
+          reference_frame(reference_frame) {}
 
-//     struct task_state {
-//         eigen_matrix3_t rotation = eigen_matrix3_t::Identity();
-//     };
+    struct task_state {
+        eigen_matrix3_t rotation = eigen_matrix3_t::Identity();
+    };
 
-//     struct error_state {
-//         eigen_vector3_t rotation = eigen_vector3_t::Zero();
-//     };
+    struct error_state {
+        eigen_vector3_t rotation = eigen_vector3_t::Zero();
+    };
 
-//     typedef task_state task_state_t;
-//     typedef error_state task_error_t;
-//     typedef error_state task_tolerance_t;
-//     typedef task_state_t reference_t;
+    typedef task_state task_state_t;
+    typedef error_state task_error_t;
+    typedef error_state task_tolerance_t;
+    typedef task_state_t reference_t;
 
-//     integer_type get_task_state(const model_t &model, const data_t &data,
-//                                 task_state_t &task_state) const {
-//         task_state.rotation =
-//             data.oMf[model.getFrameId(reference_frame)]
-//                 .actInv(data.oMf[model.getFrameId(target_frame)])
-//                 .rotation();
-//         return integer_type(0);
-//     }
+    void compute_error(const model_t &model, data_t &data,
+                       Eigen::Ref<eigen_vector_t> e) override {
+        // Compute task state
+        state.rotation = data.oMf[model.getFrameId(reference_frame)]
+                             .actInv(data.oMf[model.getFrameId(target_frame)])
+                             .rotation();
 
-//     integer_type get_task_jacobian(const model_t &model, data_t &data,
-//                                    eigen_matrix_t &jacobian) {
-//         pinocchio::getFrameJacobian(model, data,
-//         model.getFrameId(target_frame),
-//                                     pinocchio::WORLD, jacobian);
-//         Eigen::Matrix<double, 3, 3> Jlog;
-//         pinocchio::Jlog3(reference.rotation.transpose() *
-//         task_state.rotation,
-//                          Jlog);
-//         jacobian = data.oMf[model.getFrameId(reference_frame)]
-//                        .actInv(jacobian)
-//                        .bottomRows(3);
-//     }
+        // Compute task error
+        error.rotation =
+            pinocchio::log3(reference.rotation.transpose() * state.rotation);
+        // Set error
+        e = error.rotation;
+    }
 
-//     integer_type get_task_error(const task_state_t &task_state,
-//                                 task_error_t &error) const {
-//         error.rotation = pinocchio::log3(reference.rotation.transpose() *
-//                                          task_state.rotation);
+    void compute_jacobian(const model_t &model, data_t &data,
+                          Eigen::Ref<eigen_matrix_t> jac) override {
+        pinocchio::getFrameJacobian(model, data, model.getFrameId(target_frame),
+                                    pinocchio::WORLD, frame_jacobian_);
+        Eigen::Matrix<double, 3, 3> Jlog;
+        pinocchio::Jlog3(reference.rotation.transpose() * state.rotation, Jlog);
+        jac = (data.oMf[model.getFrameId(reference_frame)]
+                   .toActionMatrixInverse() *
+               frame_jacobian_)
+                  .bottomRows(3);
+    }
 
-//         return integer_type(0);
-//     }
+    reference_t reference;
 
-//     reference_t reference;
-//     string_t target_frame;
-//     string_t reference_frame;
+    task_state_t state;
+    task_error_t error;
+    task_tolerance_t tolerance;
 
-//    private:
-// };
+    string_t target_frame;
+    string_t reference_frame;
 
-// class CentreOfMassTask : public Task {
-//    public:
-//     CentreOfMassTask(const model_t &model,
-//                      const std::string &reference_frame);
+   private:
+};
 
-//     struct task_state {
-//         eigen_vector3_t position = eigen_vector3_t::Zero();
-//         eigen_vector3_t velocity = eigen_vector3_t::Zero();
-//     };
+class CentreOfMassTask : public Task<double, std::size_t> {
+   public:
+    CentreOfMassTask(const model_t &model, const std::string &reference_frame)
+        : Task<double, std::size_t>(3, model),
+          reference_frame(reference_frame) {};
 
-//     typedef task_state task_state_t;
-//     typedef task_state_t reference_t;
+    struct task_state {
+        eigen_vector3_t position = eigen_vector3_t::Zero();
+    };
 
-//     integer_type get_task_state(const model_state_t &model_state,
-//                                 task_state_t &task_state) const {
-//         return integer_type(0);
-//     }
+    typedef task_state task_state_t;
+    typedef task_state_t task_error_t;
+    typedef task_error_t task_tolerance_t;
+    typedef task_state_t reference_t;
 
-//     integer_type get_task_error(const task_state_t &task_state,
-//                                 task_error_t &error,
-//                                 const value_type &dt = 0.0) const {
-//         return integer_type(0);
-//     }
+    void compute_error(const model_t &model, data_t &data,
+                       Eigen::Ref<eigen_vector_t> e) override {
+        // Compute task state
+        state.position =
+            data.oMf[model.getFrameId(reference_frame)].actInv(data.com[0]);
+        // Compute task error
+        error.position = state.position - reference.position;
+        // Set error
+        e = error.position;
+    }
 
-//     reference_t reference;
-//     string_t target_frame;
-//     string_t reference_frame;
+    void compute_jacobian(const model_t &model, data_t &data,
+                          Eigen::Ref<eigen_matrix_t> jac) override {
+        jac = data.oMf[model.getFrameId(reference_frame)]
+                  .toActionMatrixInverse()
+                  .topLeftCorner(3, 3) *
+              data.Jcom;
+    }
 
-//    private:
-//     typedef bopt::casadi::expression_evaluator<value_type>
-//         expression_evaluator_t;
-//     std::unique_ptr<expression_evaluator_t> xpos;
-//     std::unique_ptr<expression_evaluator_t> xvel;
-// };
+    reference_t reference;
+
+    task_state_t state;
+    task_error_t error;
+    task_tolerance_t tolerance;
+
+    string_t reference_frame;
+
+   private:
+};
 
 // class SE3Task : public Task<double, std::size_t> {
 //    public:
