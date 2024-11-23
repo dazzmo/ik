@@ -1,5 +1,5 @@
 
-#include "ik/ik.hpp"
+#include "ik/program.hpp"
 
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>

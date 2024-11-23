@@ -15,7 +15,7 @@ TEST(Task, PositionTask) {
     ik::PositionTask task(model, "ee_fixed_joint", "universe");
 }
 
-TEST(Task, PositionTask) {
+TEST(Task, OrientationTask) {
     const std::string urdf_filename = "ur5.urdf";
     // Load the urdf model
     pinocchio::Model model;
