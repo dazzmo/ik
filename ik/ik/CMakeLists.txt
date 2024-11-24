@@ -7,7 +7,7 @@ find_package(bopt REQUIRED)
 # Collect source files
 SET(${PROJECT_NAME}_SOURCES
 common.cpp
-program.cpp
+problem.cpp
 task.cpp
 constraint.cpp
 )

@@ -1,5 +1,5 @@
 #include "ik/common.hpp"
-#include "ik/program.hpp"
+#include "ik/problem.hpp"
 
 namespace ik {
 
@@ -11,7 +11,7 @@ class inverse_kinematics_visitor {
     
     virtual bool update_jacobian() const { return true; }
 
-    virtual bool should_stop(const InverseKinematicsProblem& ik, const eigen_vector_t& dq) const {
+    virtual bool should_stop(const InverseKinematicsProblem& ik, const vector_t& dq) const {
         if(dq.squaredNorm() < 1e-4) return true;
         return false;
     }

@@ -24,9 +24,12 @@ find_package(pinocchio REQUIRED)
 
 find_package(ik REQUIRED)
 
+include_directories(include)
+
 # Cassie Example
 add_executable(cassie_ik 
 src/cassie.cpp
+src/rviz_model_loader.cpp
 )
 ament_target_dependencies(cassie_ik
   geometry_msgs

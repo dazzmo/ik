@@ -11,7 +11,7 @@
 #include <pinocchio/algorithm/center-of-mass.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
-#include "ik/program.hpp"
+#include "ik/problem.hpp"
 #include "ik/visitor.hpp"
 
 namespace ik {
@@ -35,8 +35,8 @@ struct dls_parameters {
  * the initial joint configuration or attempts a random restart (if
  * implemented).
  *
- * @param ik An instance of the inverse kinematics problem, containing the model
- * and tasks.
+ * @param problem An instance of the inverse kinematics problem, containing the
+ * model and tasks.
  * @param q0 Initial joint configuration vector.
  * @param visitor A visitor object to handle intermediate states and termination
  * criteria. Default is an empty visitor that performs no special handling.
@@ -58,18 +58,18 @@ struct dls_parameters {
  * @note If limited convergence occurs, consider adding a random restart
  * mechanism.
  */
-eigen_vector_t dls(
-    InverseKinematicsProblem &problem, const eigen_vector_t &q0,
+vector_t dls(
+    InverseKinematicsProblem &problem, const vector_t &q0,
     const inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
     const dls_parameters &p = dls_parameters()) {
     // Parameters we can decide on later
     std::size_t sz = problem.e_size();
 
     // Initialise jacobian
-    eigen_vector_t q = q0, dq(problem.model.nv), e(sz);
-    eigen_matrix_t J(sz, problem.model.nv), JJ(sz, sz);
+    vector_t q = q0, dq(problem.model().nv), e(sz);
+    matrix_t J(sz, problem.model().nv), JJ(sz, sz);
 
-    data_t data = pinocchio::Data(problem.model);
+    data_t data = pinocchio::Data(problem.model());
 
     // todo - if limited convergence, try random walk
 
@@ -78,21 +78,19 @@ eigen_vector_t dls(
     // Perform iterations
     for (std::size_t i = 0; i < p.max_iterations; ++i) {
         // Update model
-        pinocchio::framesForwardKinematics(problem.model, data, q);
-        pinocchio::computeJointJacobians(problem.model, data);
+        pinocchio::framesForwardKinematics(problem.model(), data, q);
+        pinocchio::computeJointJacobians(problem.model(), data);
         if (problem.get_centre_of_mass_task())
-            pinocchio::jacobianCenterOfMass(problem.model, data, q, false);
+            pinocchio::jacobianCenterOfMass(problem.model(), data, q, false);
 
         std::size_t cnt = 0;
         for (auto &task : tasks) {
             // Get references
-            Eigen::Ref<eigen_vector_t> ei =
-                e.middleRows(cnt, task->dimension());
-            Eigen::Ref<eigen_matrix_t> Ji =
-                J.middleRows(cnt, task->dimension());
+            vector_ref_t ei = e.middleRows(cnt, task->dimension());
+            matrix_ref_t Ji = J.middleRows(cnt, task->dimension());
             // Compute task error and jacobians
-            task->compute_error(problem.model, data, ei);
-            task->compute_jacobian(problem.model, data, Ji);
+            task->compute_error(problem.model(), data, ei);
+            task->compute_jacobian(problem.model(), data, Ji);
             // Weight tasks
             ei = ei.cwiseProduct(task->weighting());
             Ji = task->weighting().asDiagonal() * Ji;
@@ -117,10 +115,10 @@ eigen_vector_t dls(
         }
 
         // Take a step
-        q = pinocchio::integrate(problem.model, q, p.step_length * dq);
+        q = pinocchio::integrate(problem.model(), q, p.step_length * dq);
 
         // Clip joints if any exceed bounds
-        apply_joint_clipping(problem.model, q);
+        apply_joint_clipping(problem.model(), q);
 
         // If issues, perform random restart
     }

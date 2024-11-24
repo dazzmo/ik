@@ -11,9 +11,9 @@ import xacro
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
 
-    urdf = xacro.process_file(os.path.join(get_package_share_directory('ur_description'), 'urdf', 'ur.urdf.xacro'), 
-                              mappings={'name': "ur", 'ur_type' : 'ur5'})
-    robot_desc = urdf.toprettyxml(indent='  ')
+    urdf_file = os.path.join(get_package_share_directory('cassie_description'), 'urdf', 'cassie.urdf')
+    f = open(urdf_file, 'r')
+    robot_desc = f.read()
 
     return LaunchDescription([
         Node(

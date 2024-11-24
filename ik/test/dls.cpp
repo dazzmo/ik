@@ -1,5 +1,5 @@
 
-#include "ik/program.hpp"
+#include "ik/problem.hpp"
 #include "ik/dls.hpp"
 
 #include <gflags/gflags.h>

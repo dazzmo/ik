@@ -1,0 +1,1 @@
+- cassie fixed and cassie were taken from the CassieControllers repo (from Nic and Damiens work) which was originally used to develop the osc. These two files have been copied across as we're not sure where the other urdf's are from (17.4.24)

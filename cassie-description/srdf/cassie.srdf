@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot name="cassie">
+    <group name="legs">
+        <joint name="LeftHipRoll"/>
+        <joint name="LeftHipYaw"/>
+        <joint name="LeftHipPitch"/>
+        <joint name="LeftKneePitch"/>
+        <joint name="LeftShinPitch"/>
+        <joint name="LeftTarsusPitch"/>
+        <joint name="LeftAchillesSpring"/>
+        <joint name="LeftFootPitch"/>
+        <joint name="RightHipRoll"/>
+        <joint name="RightHipYaw"/>
+        <joint name="RightHipPitch"/>
+        <joint name="RightKneePitch"/>
+        <joint name="RightShinPitch"/>
+        <joint name="RightTarsusPitch"/>
+        <joint name="RightAchillesSpring"/>
+        <joint name="RightFootPitch"/>
+    </group>
+
+    <group_state name="default" group="legs">
+        <joint name="LeftHipRoll" value="0.0045"/>
+        <joint name="LeftHipYaw" value="0.0"/>
+        <joint name="LeftHipPitch" value="0.4973"/>
+        <joint name="LeftKneePitch" value="-1.1997"/>
+        <joint name="LeftShinPitch" value="0.0"/>
+        <joint name="LeftTarsusPitch" value="1.4267"/>
+        <joint name="LeftAchillesSpring" value="0.0"/>
+        <joint name="LeftFootPitch" value="-1.5968"/>
+        <joint name="RightHipRoll" value="-0.0045"/>
+        <joint name="RightHipYaw" value="0.0"/>
+        <joint name="RightHipPitch" value="0.4973"/>
+        <joint name="RightKneePitch" value="-1.1997"/>
+        <joint name="RightShinPitch" value="0.0"/>
+        <joint name="RightTarsusPitch" value="1.4267"/>
+        <joint name="RightAchillesSpring" value="0.0"/>
+        <joint name="RightFootPitch" value="-1.5968"/>
+    </group_state>
+</robot>
