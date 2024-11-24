@@ -272,7 +272,7 @@
 
 	<!-- Robot Joint Definitions -->
 	<!--                         -->
-	<joint name="base_joint" type="floating">
+	<joint name="base_joint" type="fixed">
 		<origin rpy="0 0 0" xyz="0 0 0"/>
 		<parent link="base_link"/>
 		<child link="pelvis"/>

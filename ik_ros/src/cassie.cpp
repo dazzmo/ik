@@ -14,7 +14,7 @@
 class CassieIK {
    public:
     void init(const rclcpp::Node::SharedPtr& node) {
-        urdf_ = std::make_unique<URDFLoaderNode>(node, true, "pelvis");
+        urdf_ = std::make_unique<URDFLoaderNode>(node, true, "base_link");
 
         std::string urdf_param = "robot_description";
         std::string urdf_content;
@@ -27,7 +27,8 @@ class CassieIK {
         // Load the URDF into a Pinocchio model
         pinocchio::Model model;
         try {
-            pinocchio::urdf::buildModelFromXML(urdf_content, model);
+            pinocchio::urdf::buildModelFromXML(
+                urdf_content, pinocchio::JointModelFreeFlyer(), model);
             RCLCPP_INFO(node->get_logger(),
                         "Pinocchio model successfully loaded!");
         } catch (const std::exception& e) {
@@ -36,40 +37,52 @@ class CassieIK {
         }
 
         ik_ = std::make_unique<ik::InverseKinematicsProblem>(model);
-        // Create tasks
-        auto fl = ik::FrameTask::create(model, "LeftFootFront",
-                                        ik::FrameTask::Type::Position);
+        // Create leg tasks (with respect to pelvis frame)
+        auto fl = ik::FrameTask::create(
+            model, "LeftFootFront", ik::FrameTask::Type::Position, "pelvis");
 
-        auto fr = ik::FrameTask::create(model, "RightFootFront",
-                                        ik::FrameTask::Type::Position);
+        auto fr = ik::FrameTask::create(
+            model, "RightFootFront", ik::FrameTask::Type::Position, "pelvis");
 
+        // Pelvis orientation tracking task in world frame
         auto pelvis =
-            ik::FrameTask::create(model, "pelvis", ik::FrameTask::Type::Full);
+            ik::FrameTask::create(model, "pelvis", ik::FrameTask::Type::Orientation);
 
+        // Centre of mass task, in world frame
+        auto com = ik::CentreOfMassTask::create(model);
+
+        // Create configuration vector
         q_ = ik::vector_t::Zero(model.nq);
-        // Set quaternion
+        // Set quaternion w component to 1.0
         q_[6] = 1.0;
 
         ik_->add_frame_task("fl", fl);
         ik_->add_frame_task("fr", fr);
         ik_->add_frame_task("pelvis", pelvis);
+        ik_->add_centre_of_mass_task(com);
     }
 
     void loop(const rclcpp::Node::SharedPtr& node) {
-        ik_->get_frame_task("fl")->target.translation() << 0.1, 0.1,
-            -0.6 + 0.3 * sin(node->now().seconds());
+        double t = node->now().seconds();
+        // Very primitive imitation of a walk cycle
+        ik_->get_frame_task("fl")->target.translation()
+            << 0.3 * sin(3 * t + M_PI),
+            0.1, -0.6 + 0.1 * sin(3 * t);
 
-        ik_->get_frame_task("fr")->target.translation() << 0.1, 0.1,
-            -0.6 - 0.3 * sin(node->now().seconds());
+        ik_->get_frame_task("fr")->target.translation() << 0.3 * sin(3 * t),
+            -0.1, -0.6 - 0.1 * sin(3 * t);
 
-        ik_->get_frame_task("pelvis")->target.translation()
-            << 0.5 + 0.5 * sin(node->now().seconds()),
-            0, 0;
+        // ik_->get_frame_task("pelvis")->target.translation()
+        //     << 0.5 + 0.5 * sin(0.5 * t),
+        //     0, 0.8 + 0.01 * sin(node->now().seconds());
         ik_->get_frame_task("pelvis")->target.rotation().setIdentity();
+
+        ik_->get_centre_of_mass_task()->target << 0.5 + 0.5 * sin(0.5 * t), 0,
+            0.8 + 0.01 * sin(node->now().seconds());
 
         ik::dls_parameters p;
         p.damping = 1e-2;
-        // Compute inverse kinematics solution
+        // Compute inverse kinematics solution with damped least squares
         q_ = ik::dls(*ik_, q_, ik::inverse_kinematics_visitor(), p);
         // Display
         urdf_->setConfiguration(q_);

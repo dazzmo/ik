@@ -1,8 +1,6 @@
 include(CMakeFindDependencyMacro)
 
-find_dependency(casadi REQUIRED)
 find_dependency(Eigen3 REQUIRED)
-find_dependency(bopt REQUIRED)
 find_dependency(glog REQUIRED)
 find_dependency(pinocchio REQUIRED)
 

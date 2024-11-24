@@ -2,8 +2,6 @@ find_package(Boost REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 find_package(pinocchio REQUIRED)
 
-find_package(bopt REQUIRED)
-
 # Collect source files
 SET(${PROJECT_NAME}_SOURCES
 common.cpp
@@ -14,9 +12,7 @@ constraint.cpp
 
 SET(${PROJECT_NAME}_LIBRARIES
 Eigen3::Eigen
-casadi
 pinocchio::pinocchio
-bopt
 glog
 )
 

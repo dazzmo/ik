@@ -20,7 +20,12 @@ URDFLoaderNode::URDFLoaderNode(const rclcpp::Node::SharedPtr& node,
     // Load the URDF into a Pinocchio model
     pinocchio::Model model;
     try {
-        pinocchio::urdf::buildModelFromXML(urdf_content, model);
+        if (floating_base) {
+            pinocchio::urdf::buildModelFromXML(
+                urdf_content, pinocchio::JointModelFreeFlyer(), model);
+        } else {
+            pinocchio::urdf::buildModelFromXML(urdf_content, model);
+        }
         RCLCPP_INFO(node->get_logger(), "Pinocchio model successfully loaded!");
     } catch (const std::exception& e) {
         RCLCPP_ERROR(node->get_logger(),
@@ -31,13 +36,7 @@ URDFLoaderNode::URDFLoaderNode(const rclcpp::Node::SharedPtr& node,
     n_joints_ = floating_base ? model.nq - 7 : model.nq;
 
     // Initialise the joint state message
-    int start_idx = 0;
-    if (floating_base) {
-        start_idx = 2;
-    } else {
-        start_idx = 1;
-    }
-    for (std::size_t i = start_idx; i < model.names.size(); ++i) {
+    for (std::size_t i = 2; i < model.names.size(); ++i) {
         joint_state_msg_.name.push_back(model.names[i]);
         joint_state_msg_.position.push_back(0.0);
     }
