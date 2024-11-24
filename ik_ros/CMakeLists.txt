@@ -61,7 +61,7 @@ endif()
 
 install(DIRECTORY
   launch
-  # rviz
+  rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

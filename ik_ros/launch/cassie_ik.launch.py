@@ -25,7 +25,9 @@ def generate_launch_description():
         ),
         Node(
             package='rviz2',
-            executable='rviz2'
+            executable='rviz2',
+            arguments=['-d' + os.path.join(get_package_share_directory('ik_ros'), 
+                                           'rviz', 'config.rviz')]
         ),
         Node(
             package='robot_state_publisher',
