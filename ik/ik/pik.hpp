@@ -49,6 +49,9 @@ void damp_svd(Eigen::JacobiSVD<Eigen::MatrixXd> &svd, const double &lambda) {
 void pik(InverseKinematicsProblem &problem, const vector_t &q0,
          inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
          const pik_parameters &p = pik_parameters()) {
+    // todo - complete this approach
+    throw std::runtime_error(
+        "PIK is currently under development and is not a working algorithm");
     // Parameters we can decide on later
     std::size_t sz = problem.e_size();
 
@@ -99,10 +102,8 @@ void pik(InverseKinematicsProblem &problem, const vector_t &q0,
             std::size_t cnt = 0;
             for (auto &task : tasks[priority]) {
                 // Get references
-                Eigen::Ref<vector_t> ei =
-                    e.middleRows(cnt, task->dimension());
-                Eigen::Ref<matrix_t> Ji =
-                    J.middleRows(cnt, task->dimension());
+                Eigen::Ref<vector_t> ei = e.middleRows(cnt, task->dimension());
+                Eigen::Ref<matrix_t> Ji = J.middleRows(cnt, task->dimension());
                 // Compute task error and jacobians
                 task->compute_error(problem.model, data, ei);
                 task->compute_jacobian(problem.model, data, Ji);

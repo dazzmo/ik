@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <bopt/variable.hpp>
 #include <casadi/casadi.hpp>
 #include <pinocchio/autodiff/casadi.hpp>
 #include <pinocchio/multibody/data.hpp>
@@ -49,5 +48,15 @@ inline void apply_joint_clipping(const model_t &model, vector_t &q) {
     q.noalias() =
         model.upperPositionLimit.cwiseMin(q.cwiseMax(model.lowerPositionLimit));
 }
+
+// Default solver parameters
+struct default_solver_parameters {
+    // Maximum number of iterations to perform
+    int max_iterations = 100;
+    // Maximum solve time allowable
+    double max_time = 1.0;
+    // Step length to perform
+    double step_length = 1.0;
+};
 
 }  // namespace ik

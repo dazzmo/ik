@@ -1,46 +1,74 @@
 #pragma once
 
-#include <bopt/ad/casadi/casadi.hpp>
-#include <bopt/constraints.hpp>
-#include <bopt/costs.hpp>
-#include <bopt/variable.hpp>
+#define GLOG_USE_GLOG_EXPORT
+#include <glog/logging.h>
+
+#include <Eigen/Core>
 
 #include "ik/common.hpp"
 
 namespace ik {
 
+template <class T>
+struct constraint_traits {
+    typedef typename T::value_type value_type;
+    typedef typename T::index_type index_type;
+    typedef typename T::integer_type integer_type;
+};
+
+struct constraint_attributes {};
+
 /**
- * @brief Holonomic constraint related to a model
+ * @brief Representation of a task within an inverse-kinematics context, such as
+ * maintaining a frame position, orientation or pose. This could also be related
+ * to retaining a nominal joint configuration or a centre of mass position.
  *
+ * @tparam ValueType Type for the values used within the task.
+ * @tparam IndexType Type for indexing variables in arrays.
+ * @tparam IntegerType Type for integer values.
  */
-class HolonomicConstraint {
+template <typename ValueType, typename IndexType = std::size_t,
+          typename IntegerType = int>
+class ConstraintTpl {
    public:
-    typedef double value_type;
-    typedef std::size_t index_type;
+    typedef ValueType value_type;
+    typedef IndexType index_type;
+    typedef IntegerType integer_type;
 
-    HolonomicConstraint(const index_type &dim, const index_type &model_nq,
-                        const index_type &model_nv)
-        : dimension_(dim), model_nq_(model_nq), model_nv_(model_nv) {}
+    ConstraintTpl() : dimension_(index_type(0)) {}
+    ConstraintTpl(const index_type &dimension) : dimension_(dimension) {
+        set_dimension(dimension);
+    }
 
-    virtual bopt::linear_constraint<value_type>::shared_ptr
-    create_linear_constraint(const model_t &model) const {
-        return nullptr;
-    };
+    virtual void compute_error(const model_t &model, data_t &data,
+                               vector_ref_t e) = 0;
 
-    const index_type &dimension() const { return dimension_; }
+    virtual void compute_jacobian(const model_t &model, data_t &data,
+                                  matrix_ref_t jac) = 0;
 
-    const index_type &model_nq() const { return model_nq_; }
-    const index_type &model_nv() const { return model_nv_; }
+    /**
+     * @brief Dimension of the task (specifically, the dimension of the error
+     * between a target and a state)
+     *
+     * @return index_type
+     */
+    index_type dimension() const { return dimension_; }
 
-    virtual eigen_matrix_sym_t constraint_jacobian(
-        const model_t &model, const eigen_vector_sym_t &q) const = 0;
-
-    // todo - to_linear_constraint()
+   protected:
+    /**
+     * @brief Set the dimension object
+     *
+     * @param dimension
+     */
+    void set_dimension(const index_type &dimension) {
+        dimension_ = dimension;
+    }
 
    private:
+    // Dimension of the task
     index_type dimension_;
-    index_type model_nq_;
-    index_type model_nv_;
 };
+
+typedef ConstraintTpl<double> Constraint;
 
 }  // namespace ik

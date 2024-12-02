@@ -11,8 +11,8 @@ class inverse_kinematics_visitor {
     
     virtual bool update_jacobian() const { return true; }
 
-    virtual bool should_stop(const InverseKinematicsProblem& ik, const vector_t& dq) const {
-        if(dq.squaredNorm() < 1e-4) return true;
+    virtual bool should_stop(const InverseKinematicsProblem& ik, const vector_t& e, const vector_t& dq) const {
+        if(e.squaredNorm() < 1e-4) return true;
         return false;
     }
 };

@@ -38,15 +38,16 @@ class CassieIK {
 
         ik_ = std::make_unique<ik::InverseKinematicsProblem>(model);
         // Create leg tasks (with respect to pelvis frame)
-        auto fl = ik::FrameTask::create(
-            model, "LeftFootFront", ik::FrameTask::Type::Position, "pelvis");
+        auto fl = ik::FrameTask::create(model, "LeftFootFront",
+                                        ik::KinematicType::Position, "pelvis");
 
-        auto fr = ik::FrameTask::create(
-            model, "RightFootFront", ik::FrameTask::Type::Position, "pelvis");
+        // Frame constraint
+        auto fr = ik::FrameConstraint::create(
+            model, "RightFootFront", ik::KinematicType::Position, "universe");
 
         // Pelvis orientation tracking task in world frame
         auto pelvis =
-            ik::FrameTask::create(model, "pelvis", ik::FrameTask::Type::Orientation);
+            ik::FrameTask::create(model, "pelvis", ik::KinematicType::Full);
 
         // Centre of mass task, in world frame
         auto com = ik::CentreOfMassTask::create(model);
@@ -56,34 +57,38 @@ class CassieIK {
         // Set quaternion w component to 1.0
         q_[6] = 1.0;
 
+        // Add a frame task to move the left foot relative to the pelvis
         ik_->add_frame_task("fl", fl);
-        ik_->add_frame_task("fr", fr);
+        // Add a frame constraint to keep the foot in place
+        ik_->add_frame_constraint("fr", fr);
+        // Add a frame task for the pelvis pose within the inertial frame
         ik_->add_frame_task("pelvis", pelvis);
-        ik_->add_centre_of_mass_task(com);
+        // ik_->add_centre_of_mass_task(com);
+
+        // Create data for the program
+        data_ = std::make_unique<ik::dls_data>(*ik_);
     }
 
     void loop(const rclcpp::Node::SharedPtr& node) {
         double t = node->now().seconds();
         // Very primitive imitation of a walk cycle
-        ik_->get_frame_task("fl")->target.translation()
-            << 0.3 * sin(3 * t + M_PI),
-            0.1, -0.6 + 0.1 * sin(3 * t);
+        ik_->get_frame_task("fl")->target.translation() << 0.0, 0.1,
+            -0.6 + 0.2 * sin(0.5 * t);
 
-        ik_->get_frame_task("fr")->target.translation() << 0.3 * sin(3 * t),
-            -0.1, -0.6 - 0.1 * sin(3 * t);
-
-        // ik_->get_frame_task("pelvis")->target.translation()
-        //     << 0.5 + 0.5 * sin(0.5 * t),
-        //     0, 0.8 + 0.01 * sin(node->now().seconds());
         ik_->get_frame_task("pelvis")->target.rotation().setIdentity();
+        ik_->get_frame_task("pelvis")->target.translation().x() =
+            0.3 * sin(0.5 * t);
+        ik_->get_frame_task("pelvis")->target.translation().y() = 0.0;
+        ik_->get_frame_task("pelvis")->target.translation().z() = 0.0;
 
-        ik_->get_centre_of_mass_task()->target << 0.5 + 0.5 * sin(0.5 * t), 0,
-            0.8 + 0.01 * sin(node->now().seconds());
 
         ik::dls_parameters p;
+        // Example parameters
         p.damping = 1e-2;
+        p.max_iterations = 100;
+        p.step_length = 1e0;
         // Compute inverse kinematics solution with damped least squares
-        q_ = ik::dls(*ik_, q_, ik::inverse_kinematics_visitor(), p);
+        q_ = ik::dls(*ik_, q_, *data_, ik::inverse_kinematics_visitor(), p);
         // Display
         urdf_->setConfiguration(q_);
     }
@@ -95,11 +100,12 @@ class CassieIK {
     std::unique_ptr<ik::InverseKinematicsProblem> ik_;
     std::unique_ptr<URDFLoaderNode> urdf_;
     ik::vector_t q_;
+    std::unique_ptr<ik::dls_data> data_;
 };
 
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
-    rclcpp::Rate loop_rate(100);
+    rclcpp::Rate loop_rate(50);
     rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("ik");
 
     FLAGS_logtostderr = 1;

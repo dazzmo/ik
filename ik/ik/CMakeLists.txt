@@ -6,8 +6,6 @@ find_package(pinocchio REQUIRED)
 SET(${PROJECT_NAME}_SOURCES
 common.cpp
 problem.cpp
-task.cpp
-constraint.cpp
 )
 
 SET(${PROJECT_NAME}_LIBRARIES

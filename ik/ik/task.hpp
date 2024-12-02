@@ -18,6 +18,15 @@ struct task_traits {
 
 struct task_attributes {};
 
+/**
+ * @brief Representation of a task within an inverse-kinematics context, such as
+ * maintaining a frame position, orientation or pose. This could also be related
+ * to retaining a nominal joint configuration or a centre of mass position.
+ *
+ * @tparam ValueType Type for the values used within the task.
+ * @tparam IndexType Type for indexing variables in arrays.
+ * @tparam IntegerType Type for integer values.
+ */
 template <typename ValueType, typename IndexType = std::size_t,
           typename IntegerType = int>
 class TaskTpl {
