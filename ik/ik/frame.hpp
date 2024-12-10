@@ -33,7 +33,7 @@ enum class KinematicType { Position, Orientation, Full };
  * @param reference_frame
  * @param type
  */
-void compute_frame_error(const model_t &model, data_t &data, vector_ref_t e,
+inline void compute_frame_error(const model_t &model, data_t &data, vector_ref_t e,
                          const std::string &frame, const pinocchio::SE3 &target,
                          const std::string &reference_frame,
                          const KinematicType &type = KinematicType::Full) {

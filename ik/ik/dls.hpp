@@ -110,7 +110,7 @@ struct dls_info {
  * @note If limited convergence occurs, consider adding a random restart
  * mechanism.
  */
-vector_t dls(
+inline vector_t dls(
     InverseKinematicsProblem &problem, const vector_t &q0, dls_data &data,
     const inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
     const dls_parameters &p = dls_parameters()) {
