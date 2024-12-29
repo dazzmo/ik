@@ -62,6 +62,7 @@ class InverseKinematicsProblem {
         if (frame_tasks_map_.find(name) != frame_tasks_map_.end()) {
             return frame_tasks_map_.at(name);
         } else {
+            assert("Frame task does not exist!");
             return frame_tasks_.size();
         }
     }

@@ -102,7 +102,8 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
         : TaskTpl<ValueType, IndexType, IntegerType>(),
           frame(frame),
           type(type),
-          reference_frame(reference_frame) {
+          reference_frame(reference_frame),
+          target(se3_t::Identity()){
         // assert(model.getFrameId(frame) < model.frames().size() &&
         //        "Frame not found in model");
         // assert(model.getFrameId(reference_frame) < model.frames().size() &&
@@ -257,7 +258,8 @@ class FrameConstraintTpl
         : ConstraintTpl<ValueType, IndexType, IntegerType>(),
           frame(frame),
           type(type),
-          reference_frame(reference_frame) {
+          reference_frame(reference_frame),
+          target(se3_t::Identity()) {
         // assert(model.getFrameId(frame) < model.frames().size() &&
         //        "Frame not found in model");
         // assert(model.getFrameId(reference_frame) < model.frames().size() &&
