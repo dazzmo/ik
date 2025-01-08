@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ik/frame.hpp"
 #include "ik/centre_of_mass.hpp"
+#include "ik/frame.hpp"
+#include "ik/posture.hpp"
 
 namespace ik {
 
@@ -13,16 +14,37 @@ class InverseKinematicsProblem {
      *
      * @param model
      */
-    InverseKinematicsProblem(model_t &model) : model_(model) {}
+    InverseKinematicsProblem(model_t &model,
+                             const std::size_t &max_priority_level = 1)
+        : model_(model),
+          max_priority_level_(max_priority_level),
+          tasks_(max_priority_level + 1, std::vector<std::shared_ptr<Task>>()) {
+        assert(max_priority_level && "Priority level must be >= 1!");
+    }
 
-    std::size_t e_size() const {
+    const std::size_t &max_priority_level() const {
+        return max_priority_level_;
+    }
+
+    /**
+     * @brief Dimension of the error vector within the problem for the requested
+     * level of priority.
+     *
+     * @return std::size_t
+     */
+    std::size_t e_size(const std::size_t &priority) const {
         std::size_t sz = 0;
-        for (const auto &task : get_all_tasks()) {
+        for (const auto &task : get_all_tasks(priority)) {
             sz += task->dimension();
         }
         return sz;
     }
 
+    /**
+     * @brief Dimension of the constraint vector within the problem.
+     *
+     * @return std::size_t
+     */
     std::size_t c_size() const {
         std::size_t sz = 0;
         for (const auto &constraint : get_all_constraints()) {
@@ -32,11 +54,14 @@ class InverseKinematicsProblem {
     }
 
     std::shared_ptr<FrameTask> add_frame_task(
-        const std::string &name, const std::shared_ptr<FrameTask> &task) {
+        const std::string &name, const std::shared_ptr<FrameTask> &task,
+        const std::size_t &priority = 0) {
         // Insert into map
         frame_tasks_map_.insert({name, frame_tasks_.size()});
         // Create shared frame task
         frame_tasks_.push_back(task);
+        // Add to task vector
+        tasks_[priority].push_back(task);
         // Return pointer to task
         return frame_tasks_.back();
     }
@@ -68,8 +93,11 @@ class InverseKinematicsProblem {
     }
 
     std::shared_ptr<CentreOfMassTask> add_centre_of_mass_task(
-        const std::shared_ptr<CentreOfMassTask> &task) {
+        const std::shared_ptr<CentreOfMassTask> &task,
+        const std::size_t &priority = 0) {
         com_task_ = task;
+        // Add to task vector
+        tasks_[priority].push_back(task);
         return com_task_;
     }
 
@@ -77,13 +105,37 @@ class InverseKinematicsProblem {
         return com_task_;
     }
 
-    std::vector<std::shared_ptr<Task>> get_all_tasks() const {
-        std::vector<std::shared_ptr<Task>> tasks = {};
-        tasks.insert(tasks.end(), frame_tasks_.begin(), frame_tasks_.end());
-        if (com_task_) {
-            tasks.push_back(com_task_);
+    std::shared_ptr<PostureTask> add_posture_task(
+        const std::string &name, const std::shared_ptr<PostureTask> &task,
+        const std::size_t &priority = 0) {
+        // Insert into map
+        posture_tasks_map_.insert({name, posture_tasks_.size()});
+        // Create shared posture task
+        posture_tasks_.push_back(task);
+        // Add to task vector
+        tasks_[priority].push_back(task);
+        // Return pointer to task
+        return posture_tasks_.back();
+    }
+
+    std::shared_ptr<PostureTask> get_posture_task(const std::string &name) {
+        return posture_tasks_[get_posture_task_index(name)];
+    }
+
+    std::size_t get_posture_task_index(const string_t &name) {
+        if (posture_tasks_map_.find(name) != posture_tasks_map_.end()) {
+            return posture_tasks_map_.at(name);
+        } else {
+            assert("Posture task does not exist!");
+            return posture_tasks_.size();
         }
-        return tasks;
+    }
+
+    const std::vector<std::shared_ptr<Task>> &get_all_tasks(
+        const std::size_t &priority) const {
+        assert(priority <= max_priority_level_ &&
+               "Maximum priority level exceeded!");
+        return tasks_[priority];
     }
 
     std::vector<std::shared_ptr<Constraint>> get_all_constraints() const {
@@ -103,15 +155,22 @@ class InverseKinematicsProblem {
 
    private:
     model_t model_;
+    std::size_t max_priority_level_;
+
     std::shared_ptr<CentreOfMassTask> com_task_ = nullptr;
 
-    // Frame tasks
+    // Tasks partitioned by priority
+    std::vector<std::vector<std::shared_ptr<Task>>> tasks_;
 
+    // Posture tasks
+    std::vector<std::shared_ptr<PostureTask>> posture_tasks_;
+    std::unordered_map<string_t, std::size_t> posture_tasks_map_;
+
+    // Frame tasks
     std::vector<std::shared_ptr<FrameTask>> frame_tasks_;
     std::unordered_map<string_t, std::size_t> frame_tasks_map_;
 
     // Frame constraints
-
     std::vector<std::shared_ptr<FrameConstraint>> frame_constraints_;
     std::unordered_map<string_t, std::size_t> frame_constraints_map_;
 };

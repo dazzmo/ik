@@ -44,7 +44,7 @@ class CentreOfMassTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
     }
 
     void compute_error(const model_t &model, data_t &data,
-                       vector_ref_t e) override {
+                       const vector_const_ref_t q, vector_ref_t e) override {
         e = data.oMf[model.getFrameId(reference_frame)].actInv(data.com[0]) -
             target;
     }

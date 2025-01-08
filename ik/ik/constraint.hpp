@@ -41,6 +41,7 @@ class ConstraintTpl {
     }
 
     virtual void compute_error(const model_t &model, data_t &data,
+                               const vector_const_ref_t q,
                                vector_ref_t e) = 0;
 
     virtual void compute_jacobian(const model_t &model, data_t &data,
@@ -60,9 +61,7 @@ class ConstraintTpl {
      *
      * @param dimension
      */
-    void set_dimension(const index_type &dimension) {
-        dimension_ = dimension;
-    }
+    void set_dimension(const index_type &dimension) { dimension_ = dimension; }
 
    private:
     // Dimension of the task

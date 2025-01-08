@@ -33,10 +33,11 @@ enum class KinematicType { Position, Orientation, Full };
  * @param reference_frame
  * @param type
  */
-inline void compute_frame_error(const model_t &model, data_t &data, vector_ref_t e,
-                         const std::string &frame, const pinocchio::SE3 &target,
-                         const std::string &reference_frame,
-                         const KinematicType &type = KinematicType::Full) {
+inline void compute_frame_error(
+    const model_t &model, data_t &data, vector_ref_t e,
+    const std::string &frame, const pinocchio::SE3 &target,
+    const std::string &reference_frame,
+    const KinematicType &type = KinematicType::Full) {
     // Frame to World
     const auto &oMf = get_transform_frame_to_world(model, data, frame);
     // Reference Frame to World
@@ -103,7 +104,7 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
           frame(frame),
           type(type),
           reference_frame(reference_frame),
-          target(se3_t::Identity()){
+          target(se3_t::Identity()) {
         // assert(model.getFrameId(frame) < model.frames().size() &&
         //        "Frame not found in model");
         // assert(model.getFrameId(reference_frame) < model.frames().size() &&
@@ -147,7 +148,7 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
      * @param e The vector to store the computed error.
      */
     void compute_error(const model_t &model, data_t &data,
-                       vector_ref_t e) override {
+                       const vector_const_ref_t q, vector_ref_t e) override {
         // Compute the frame error
         compute_frame_error(model, data, e, frame, target, reference_frame,
                             type);
@@ -306,7 +307,7 @@ class FrameConstraintTpl
      * @param e The vector to store the computed error.
      */
     void compute_error(const model_t &model, data_t &data,
-                       vector_ref_t e) override {
+                       const vector_const_ref_t q, vector_ref_t e) override {
         // Compute the frame error
         compute_frame_error(model, data, e, frame, target, reference_frame,
                             type);

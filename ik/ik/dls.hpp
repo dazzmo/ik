@@ -28,15 +28,26 @@ struct dls_parameters : public default_solver_parameters {
 // todo - set this data once
 struct dls_data {
     dls_data(const InverseKinematicsProblem &problem) {
-        std::size_t e_sz = problem.e_size();
-        std::size_t c_sz = problem.c_size();
-
         q = vector_t::Zero(problem.model().nq);
         dq = vector_t::Zero(problem.model().nv);
 
-        e = vector_t::Zero(e_sz);
+        e.resize(problem.max_priority_level());
+        J.resize(problem.max_priority_level());
 
-        J = matrix_t::Zero(e_sz, problem.model().nv);
+        std::size_t e_sz = 0;
+        std::size_t c_sz = problem.c_size();
+
+        for (std::size_t priority = 0; priority < problem.max_priority_level();
+             ++priority) {
+            std::size_t e_sz_i = problem.e_size(priority);
+            e[priority] = vector_t::Zero(e_sz_i);
+            J[priority] = matrix_t::Zero(e_sz_i, problem.model().nv);
+            e_sz += e_sz_i;
+        }
+
+        et = vector_t::Zero(e_sz);
+        Jt = matrix_t::Zero(e_sz, problem.model().nv);
+
         Jc = matrix_t::Zero(c_sz, problem.model().nv);
 
         JJ = matrix_t::Zero(e_sz, e_sz);
@@ -55,15 +66,19 @@ struct dls_data {
     // Hessian approximation for the problem
     matrix_t JJ;
 
+    // Total task error vector
+    vector_t et;
+    // Total task jacobian
+    matrix_t Jt;
     // Constraint jacobian
     matrix_t Jc;
     // Nullspace projection matrix
     matrix_t N;
 
-    // Task error
-    vector_t e;
-    // Task jacobian
-    matrix_t J;
+    // Task errors partitioned by priority
+    std::vector<vector_t> e;
+    // Task jacobian partitioned by priority
+    std::vector<matrix_t> J;
 };
 
 /**
@@ -118,8 +133,6 @@ inline vector_t dls(
     data_t model_data = pinocchio::Data(problem.model());
 
     // todo - if limited convergence, try random walk
-
-    auto tasks = problem.get_all_tasks();
     auto constraints = problem.get_all_constraints();
 
     // Perform iterations
@@ -127,26 +140,36 @@ inline vector_t dls(
         // Update model
         pinocchio::framesForwardKinematics(problem.model(), model_data, data.q);
         pinocchio::computeJointJacobians(problem.model(), model_data);
-        if (problem.get_centre_of_mass_task())
+        if (problem.get_centre_of_mass_task()) {
             pinocchio::jacobianCenterOfMass(problem.model(), model_data, data.q,
                                             false);
-
-        std::size_t cnt = 0;
-        for (auto &task : tasks) {
-            // Get references
-            vector_ref_t ei = data.e.middleRows(cnt, task->dimension());
-            matrix_ref_t Ji = data.J.middleRows(cnt, task->dimension());
-            // Compute task error and jacobians
-            task->compute_error(problem.model(), model_data, ei);
-            task->compute_jacobian(problem.model(), model_data, Ji);
-            // Weight tasks
-            ei = ei.cwiseProduct(task->weighting());
-            Ji = task->weighting().asDiagonal() * Ji;
-            // Move to next task
-            cnt += task->dimension();
         }
 
-        // todo - add constraints here
+        std::size_t cnt = 0;
+        // Get all priority 0 tasks
+        for (std::size_t p = 0; p < problem.max_priority_level(); ++p) {
+            std::size_t idx = 0;
+            for (auto &task : problem.get_all_tasks(p)) {
+                // Get references
+                vector_ref_t ei = data.e[p].middleRows(idx, task->dimension());
+                matrix_ref_t Ji = data.J[p].middleRows(idx, task->dimension());
+
+                // Compute task error and jacobians
+                task->compute_error(problem.model(), model_data, data.q, ei);
+                task->compute_jacobian(problem.model(), model_data, Ji);
+                // Weight tasks
+                ei = ei.cwiseProduct(task->weighting());
+                Ji = task->weighting().asDiagonal() * Ji;
+
+                // Move to next task
+                idx += task->dimension();
+            }
+
+            data.et.middleRows(cnt, data.e[p].rows()) << data.e[p];
+            data.Jt.middleRows(cnt, data.J[p].rows()) << data.J[p];
+            cnt += data.e[p].rows();
+        }
+
         cnt = 0;
         for (auto &constraint : constraints) {
             // Get references
@@ -157,8 +180,10 @@ inline vector_t dls(
             cnt += constraint->dimension();
         }
 
-        // Estimate hessian of cost
-        data.JJ.noalias() = data.J * data.J.transpose();
+        // Compute J J^T
+        // todo - create an efficient version of this which doesn't required copying
+        data.JJ.noalias() = data.Jt * data.Jt.transpose();
+        // Damp
         data.JJ.diagonal().array() += p.damping * p.damping;
 
         // Project into constraint null-space
@@ -170,13 +195,14 @@ inline vector_t dls(
         }
 
         // Compute step direction
-        data.dq = -data.N * (data.J.transpose() * data.JJ.ldlt().solve(data.e));
+        data.dq =
+            -data.N * (data.Jt.transpose() * data.JJ.ldlt().solve(data.et));
 
         VLOG(10) << "dls: it = " << i;
-        VLOG(10) << "dls: e = " << data.e.transpose();
+        VLOG(10) << "dls: e = " << data.et.transpose();
         VLOG(10) << "dls: q = " << data.q.transpose();
         VLOG(10) << "dls: dq = " << data.dq.transpose();
-        VLOG(15) << "dls: J = " << data.J;
+        VLOG(15) << "dls: J = " << data.Jt;
 
         if (visitor.should_stop(problem, data.e, data.dq)) {
             data.success = true;

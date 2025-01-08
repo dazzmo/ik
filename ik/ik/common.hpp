@@ -25,11 +25,13 @@ typedef vector_tpl_t<double> vector_t;
 typedef vector_tpl_t<double, 3> vector3_t;
 
 typedef Eigen::Ref<vector_t> vector_ref_t;
+typedef Eigen::Ref<const vector_t> vector_const_ref_t;
 
 typedef matrix_tpl_t<double> matrix_t;
 typedef matrix_tpl_t<double, 3, 3> matrix3_t;
 
 typedef Eigen::Ref<matrix_t> matrix_ref_t;
+typedef Eigen::Ref<const matrix_t> matrix_const_ref_t;
 
 template <typename Scalar>
 struct eigen_to_std_vector {

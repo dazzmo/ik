@@ -52,6 +52,9 @@ class CassieIK {
         // Centre of mass task, in world frame
         auto com = ik::CentreOfMassTask::create(model);
 
+        auto posture = ik::PostureTask::create(model, model.nq - 7);
+        posture->target.setZero();
+
         // Create configuration vector
         q_ = ik::vector_t::Zero(model.nq);
         // Set quaternion w component to 1.0
@@ -62,7 +65,8 @@ class CassieIK {
         // Add a frame constraint to keep the foot in place
         ik_->add_frame_constraint("fr", fr);
         // Add a frame task for the pelvis pose within the inertial frame
-        ik_->add_frame_task("pelvis", pelvis);
+        ik_->add_frame_task("pelvis", pelvis, 1);
+        ik_->add_posture_task("posture", posture, 1);
         // ik_->add_centre_of_mass_task(com);
 
         // Create data for the program
@@ -80,7 +84,6 @@ class CassieIK {
             0.3 * sin(0.5 * t);
         ik_->get_frame_task("pelvis")->target.translation().y() = 0.0;
         ik_->get_frame_task("pelvis")->target.translation().z() = 0.0;
-
 
         ik::dls_parameters p;
         // Example parameters

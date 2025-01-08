@@ -41,7 +41,7 @@ class TaskTpl {
     }
 
     virtual void compute_error(const model_t &model, data_t &data,
-                               vector_ref_t e) = 0;
+                               const vector_const_ref_t q, vector_ref_t e) = 0;
 
     virtual void compute_jacobian(const model_t &model, data_t &data,
                                   matrix_ref_t jac) = 0;
@@ -55,8 +55,6 @@ class TaskTpl {
     index_type dimension() const { return dimension_; }
 
     vector_t &weighting() { return weighting_; }
-
-    const index_type &priority() const { return priority_; }
 
    protected:
     /**
@@ -73,7 +71,6 @@ class TaskTpl {
     // Dimension of the task
     index_type dimension_;
     vector_t weighting_;
-    index_type priority_;
 };
 
 typedef TaskTpl<double> Task;
