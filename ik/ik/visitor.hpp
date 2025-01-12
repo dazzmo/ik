@@ -1,3 +1,4 @@
+#pragma once
 #include "ik/common.hpp"
 #include "ik/problem.hpp"
 

@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file dls.hpp
  * @author Damian Abood (damian.abood@sydney.edu.au)

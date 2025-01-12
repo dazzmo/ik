@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file pik.hpp
  * @author your name (you@domain.com)
