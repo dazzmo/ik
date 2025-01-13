@@ -12,6 +12,7 @@
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
 #include "ik/problem.hpp"
+#include "ik/data.hpp"
 #include "ik/visitor.hpp"
 
 namespace ik {
@@ -27,24 +28,16 @@ struct dls_parameters : public default_solver_parameters {
 };
 
 // todo - set this data once
-struct dls_data {
-    dls_data(const InverseKinematicsProblem &problem) {
-        q = vector_t::Zero(problem.model().nq);
-        dq = vector_t::Zero(problem.model().nv);
-
-        e.resize(problem.max_priority_level());
-        J.resize(problem.max_priority_level());
-
-        std::size_t e_sz = 0;
-        std::size_t c_sz = problem.c_size();
-
-        for (std::size_t priority = 0; priority < problem.max_priority_level();
-             ++priority) {
-            std::size_t e_sz_i = problem.e_size(priority);
-            e[priority] = vector_t::Zero(e_sz_i);
-            J[priority] = matrix_t::Zero(e_sz_i, problem.model().nv);
-            e_sz += e_sz_i;
+class dls_data : public problem_data {
+   public:
+    dls_data(const InverseKinematicsProblem &problem) : problem_data(problem) {
+        
+        std::size_t e_sz = 0, c_sz = 0;
+        for (int i = 0; i <= problem.max_priority_level(); ++i) {
+            e_sz += problem.e_size(i);
         }
+        
+        c_sz = problem.c_size();
 
         et = vector_t::Zero(e_sz);
         Jt = matrix_t::Zero(e_sz, problem.model().nv);
@@ -55,14 +48,6 @@ struct dls_data {
 
         N = matrix_t::Identity(problem.model().nv, problem.model().nv);
     }
-
-    // Whether the program was successful or not
-    bool success = false;
-
-    // Configuration vector iterate
-    vector_t q;
-    // Tangent-space step direction
-    vector_t dq;
 
     // Hessian approximation for the problem
     matrix_t JJ;
@@ -75,11 +60,6 @@ struct dls_data {
     matrix_t Jc;
     // Nullspace projection matrix
     matrix_t N;
-
-    // Task errors partitioned by priority
-    std::vector<vector_t> e;
-    // Task jacobian partitioned by priority
-    std::vector<matrix_t> J;
 };
 
 /**
@@ -131,41 +111,18 @@ inline vector_t dls(
     const inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
     const dls_parameters &p = dls_parameters()) {
     data.q = q0;
-    data_t model_data = pinocchio::Data(problem.model());
 
     // todo - if limited convergence, try random walk
     auto constraints = problem.get_all_constraints();
 
     // Perform iterations
     for (std::size_t i = 0; i < p.max_iterations; ++i) {
-        // Update model
-        pinocchio::framesForwardKinematics(problem.model(), model_data, data.q);
-        pinocchio::computeJointJacobians(problem.model(), model_data);
-        if (problem.get_centre_of_mass_task()) {
-            pinocchio::jacobianCenterOfMass(problem.model(), model_data, data.q,
-                                            false);
-        }
+        // Updata all program data
+        evaluate_problem_data(problem, data);
 
         std::size_t cnt = 0;
         // Get all priority 0 tasks
-        for (std::size_t p = 0; p < problem.max_priority_level(); ++p) {
-            std::size_t idx = 0;
-            for (auto &task : problem.get_all_tasks(p)) {
-                // Get references
-                vector_ref_t ei = data.e[p].middleRows(idx, task->dimension());
-                matrix_ref_t Ji = data.J[p].middleRows(idx, task->dimension());
-
-                // Compute task error and jacobians
-                task->compute_error(problem.model(), model_data, data.q, ei);
-                task->compute_jacobian(problem.model(), model_data, Ji);
-                // Weight tasks
-                ei = ei.cwiseProduct(task->weighting());
-                Ji = task->weighting().asDiagonal() * Ji;
-
-                // Move to next task
-                idx += task->dimension();
-            }
-
+        for (std::size_t p = 0; p <= problem.max_priority_level(); ++p) {
             data.et.middleRows(cnt, data.e[p].rows()) << data.e[p];
             data.Jt.middleRows(cnt, data.J[p].rows()) << data.J[p];
             cnt += data.e[p].rows();
@@ -176,13 +133,14 @@ inline vector_t dls(
             // Get references
             matrix_ref_t Ji = data.Jc.middleRows(cnt, constraint->dimension());
             // Compute constraint error and jacobians
-            constraint->compute_jacobian(problem.model(), model_data, Ji);
+            constraint->compute_jacobian(problem.model(), data.model_data, Ji);
             // Move to next constraint
             cnt += constraint->dimension();
         }
 
         // Compute J J^T
-        // todo - create an efficient version of this which doesn't required copying
+        // todo - create an efficient version of this which doesn't required
+        // copying
         data.JJ.noalias() = data.Jt * data.Jt.transpose();
         // Damp
         data.JJ.diagonal().array() += p.damping * p.damping;
@@ -222,7 +180,6 @@ inline vector_t dls(
 
     data.success = false;
     return data.q;
-    // If it didn't converge, try a random restart?
 }
 
 }  // namespace ik

@@ -14,6 +14,7 @@
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
 #include "ik/problem.hpp"
+#include "ik/data.hpp"
 #include "ik/visitor.hpp"
 
 namespace ik {
@@ -25,19 +26,50 @@ struct pik_parameters {
     double max_time = 1.0;
 };
 
-class FrameTask : public FrameTask {
-   public:
-    std::size_t priority = 0;
-};
+Eigen::MatrixXd damp_pseudoinverse(const Eigen::Ref<const Eigen::MatrixXd> &M,
+                                   const double &lambda) {
+    // Compute SVD
+    auto svd = Eigen::JacobiSVD<Eigen::MatrixXd>(
+        M, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-// todo - priority version
+    Eigen::MatrixXd U = svd.matrixU();
+    Eigen::MatrixXd V = svd.matrixV();
 
-void damp_svd(Eigen::JacobiSVD<Eigen::MatrixXd> &svd, const double &lambda) {
+    // Reconstruct the matrix through SVD
+    Eigen::MatrixXd res = Eigen::MatrixXd::Zero(M.cols(), M.rows());
     for (Eigen::Index i = 0; i < svd.singularValues().size(); ++i) {
         double sigma = svd.singularValues()[i];
-        svd.singularValues()[i] = (pow(lambda, 2) + pow(sigma, 2)) / sigma;
+        double scaling_factor = (sigma / (pow(lambda, 2) + pow(sigma, 2)));
+        res += scaling_factor * V.col(i) * U.col(i).transpose();
     }
+
+    return res;
 }
+
+struct pik_data : public problem_data {
+    pik_data(const InverseKinematicsProblem &problem) : problem_data(problem) {
+        P = matrix_t::Identity(problem.model().nv, problem.model().nv);
+        lambda.assign(problem.max_priority_level() + 1, 1e-1);
+
+        da = vector_t::Zero(problem.model().nv);
+
+        // Check if first joint is floating base
+        // Create indices
+        free_joint_indices.reserve(problem.model().nv);
+        locked_joint_indices.reserve(problem.model().nv);
+    }
+
+    // Projection matrix
+    matrix_t P;
+
+    vector_t da;
+
+    // Damping factors for each priority level
+    std::vector<double> lambda;
+
+    std::vector<std::size_t> free_joint_indices;
+    std::vector<std::size_t> locked_joint_indices;
+};
 
 /**
  * @brief Priority based inverse kinematics
@@ -47,96 +79,73 @@ void damp_svd(Eigen::JacobiSVD<Eigen::MatrixXd> &svd, const double &lambda) {
  * @param visitor
  * @param p
  */
-void pik(InverseKinematicsProblem &problem, const vector_t &q0,
-         inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
-         const pik_parameters &p = pik_parameters()) {
-    // todo - complete this approach
-    throw std::runtime_error(
-        "PIK is currently under development and is not a working algorithm");
-    // Parameters we can decide on later
-    std::size_t sz = problem.e_size();
+inline vector_t pik(
+    InverseKinematicsProblem &problem, const vector_t &q0, pik_data &data,
+    const inverse_kinematics_visitor &visitor = inverse_kinematics_visitor(),
+    const pik_parameters &p = pik_parameters()) {
+    data.q = q0;
 
-    // Initialise jacobian
-    vector_t q = q0, dq(problem.model.nv), e(sz);
-    matrix_t J(sz, problem.model.nv), JJ(sz, sz);
-
-    data_t data = pinocchio::Data(problem.model);
-
-    // todo - if limited convergence, try random walk
-
-    // Organise tasks into their priorities
-    std::vector<std::vector<std::shared_ptr<Task>>> tasks;
-
-    // Recursively compute priority projection
-    for (std::size_t priority = 0; priority < 10; ++priority) {
-        // Evaluate error and jacobian
-        for (auto &task : problem.get_all_tasks()) {
-            if (task->priority() == priority) {
-                tasks[priority].push_back(task);
-            }
-        }
-    }
-
-    // Perform iterations
     for (std::size_t i = 0; i < p.max_iterations; ++i) {
-        // Update model
-        pinocchio::framesForwardKinematics(problem.model, data, q);
-        pinocchio::computeJointJacobians(problem.model, data);
-        if (problem.get_centre_of_mass_task())
-            pinocchio::jacobianCenterOfMass(problem.model, data, q, false);
+        // Updata all program data
+        evaluate_problem_data(problem, data);
 
-        matrix_t P, J;
-        vector_t dx;
-        P.setIdentity();
-        // Compute priority levels
-        for (std::size_t priority = 0; i < 10; ++i) {
-            std::size_t sz = 0;
-            for (auto &task : tasks[priority]) {
-                sz += task->dimension();
-            }
+        vector_t de_bar;
+        matrix_t Jbar;
 
-            // Establish Jacobian and error
-            vector_t e(sz);
-            matrix_t J(sz, problem.model.nv);
+        // Initialisation
+        data.P.setIdentity();
+        data.dq.setZero();
 
-            // Evaluate e and J
-            std::size_t cnt = 0;
-            for (auto &task : tasks[priority]) {
-                // Get references
-                Eigen::Ref<vector_t> ei = e.middleRows(cnt, task->dimension());
-                Eigen::Ref<matrix_t> Ji = J.middleRows(cnt, task->dimension());
-                // Compute task error and jacobians
-                task->compute_error(problem.model, data, ei);
-                task->compute_jacobian(problem.model, data, Ji);
-                // Weight tasks
-                ei = ei.cwiseProduct(task->weighting());
-                Ji = task->weighting().asDiagonal() * Ji;
-                // Move to next task
-                cnt += task->dimension();
-            }
 
-            // Compensate task error
-            vector_t e_hat = e - J * dq;
-            J = J * P;
+        for (int i = 0; i <= problem.max_priority_level(); ++i) {
+            // Remove contribution of task
+            de_bar = data.e[i] - data.J[i] * data.dq;
+            //
+            Jbar = data.J[i] * data.P;
 
-            dx += J * de;
+            // Augment step
+            data.dq =
+                data.dq + damp_pseudoinverse(Jbar, data.lambda[i]) * de_bar;
 
-            // Compute SVD of Ji
-            Eigen::JacobiSVD<Eigen::MatrixXd> svd(
-                Ji, Eigen::ComputeThinU | Eigen::ComputeThinV);
-
-            // Restrict Jacobian to nullspace of all higher priorities
-
-            // Compute projection operator to next priority
-            P = P - J.completeOrthogonalDecomposition().pseudoInverse() * J;
+            // Update projection
+            data.P =
+                data.P -
+                Jbar.completeOrthogonalDecomposition().pseudoInverse() * Jbar;
         }
 
-        // dq = dq + P * da;
+        // Compute direction
+        data.dq = data.dq + data.P * data.da;
 
-        // Other tasks ...
+        if (visitor.should_stop(problem, data.e, data.dq)) {
+            data.success = true;
+            return data.q;
+        }
 
-        // dq = dq + P * ;
+        // Take a step
+        data.q = pinocchio::integrate(problem.model(), data.q,
+                                      p.step_length * data.dq);
+
+        // Clip joints if any exceed bounds
+        apply_joint_clipping(problem.model(), data.q);
+
+        // for (const std::size_t &idx : data.free_joint_indices) {
+        //     if (data.q[idx] > problem.model().upperPositionLimit[idx]) {
+        //         // dx -= Ji * dtheta
+        //         data.q[idx] = problem.model().upperPositionLimit[idx];
+        //         data.J[priority].col(0).setZero();
+        //         // Projection diagonal
+        //         // remove index and add to the locked joints
+        //     }
+
+        //     if (data.q[idx] < problem.model().lowerPositionLimit[idx]) {
+        //     }
+        // }
+
+        // If issues, perform random restart
     }
+
+    data.success = false;
+    return data.q;
 }
 
 }  // namespace ik

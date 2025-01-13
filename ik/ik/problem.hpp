@@ -15,11 +15,10 @@ class InverseKinematicsProblem {
      * @param model
      */
     InverseKinematicsProblem(model_t &model,
-                             const std::size_t &max_priority_level = 1)
+                             const std::size_t &max_priority_level = 0)
         : model_(model),
           max_priority_level_(max_priority_level),
           tasks_(max_priority_level + 1, std::vector<std::shared_ptr<Task>>()) {
-        assert(max_priority_level && "Priority level must be >= 1!");
     }
 
     const std::size_t &max_priority_level() const {

@@ -5,6 +5,7 @@ find_package(pinocchio REQUIRED)
 # Collect source files
 SET(${PROJECT_NAME}_SOURCES
 common.cpp
+data.cpp
 problem.cpp
 )
 
@@ -23,8 +24,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 message("CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR}")
 
-# Jesse: not actually sure what it does, since we dont have a include folder do we need the INSTALL_INTERFACE
-# dont know about the build interface
 target_include_directories(${PROJECT_NAME}
   PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"

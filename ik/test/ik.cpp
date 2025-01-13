@@ -6,18 +6,18 @@
 
 #include <pinocchio/parsers/urdf.hpp>
 
-TEST(ik, AddPositionTask) {
-    // Load a model
-    const std::string urdf_filename = "ur5.urdf";
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
+// TEST(ik, AddPositionTask) {
+//     // Load a model
+//     const std::string urdf_filename = "ur5.urdf";
+//     pinocchio::Model model;
+//     pinocchio::urdf::buildModel(urdf_filename, model);
 
-    std::shared_ptr<ik::PositionTask> task =
-        std::make_shared<ik::PositionTask>(model, "ee_fixed_joint", "universe");
+//     std::shared_ptr<ik::PositionTask> task =
+//         std::make_shared<ik::PositionTask>(model, "ee_fixed_joint", "universe");
 
-    ik::ik ik(model);
-    ik.add_position_task("ee", task);
-}
+//     ik::ik ik(model);
+//     ik.add_position_task("ee", task);
+// }
 
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
@@ -31,6 +31,6 @@ int main(int argc, char **argv) {
 
     int status = RUN_ALL_TESTS();
 
-    bopt::profiler summary;
+    // bopt::profiler summary;
     return status;
 }

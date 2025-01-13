@@ -4,6 +4,7 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <ik/dls.hpp>
+#include <ik/pik.hpp>
 #include <ik/problem.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -13,9 +14,12 @@
 
 class CassieIK {
    public:
-    void init(const rclcpp::Node::SharedPtr& node) {
-        urdf_ = std::make_unique<URDFLoaderNode>(node, true, "base_link");
+    enum class IKMethod { DLS = 0, PIK };
 
+    void init(const rclcpp::Node::SharedPtr& node,
+              const IKMethod& method = IKMethod::DLS) {
+        method_ = method;
+        urdf_ = std::make_unique<URDFLoaderNode>(node, true, "base_link");
         std::string urdf_param = "robot_description";
         std::string urdf_content;
 
@@ -36,13 +40,13 @@ class CassieIK {
                          "Error loading URDF into Pinocchio: %s", e.what());
         }
 
-        ik_ = std::make_unique<ik::InverseKinematicsProblem>(model);
+        ik_ = std::make_unique<ik::InverseKinematicsProblem>(model, 0);
         // Create leg tasks (with respect to pelvis frame)
         auto fl = ik::FrameTask::create(model, "LeftFootFront",
                                         ik::KinematicType::Position, "pelvis");
 
         // Frame constraint
-        auto fr = ik::FrameConstraint::create(
+        auto fr = ik::FrameTask::create(
             model, "RightFootFront", ik::KinematicType::Position, "universe");
 
         // Pelvis orientation tracking task in world frame
@@ -63,14 +67,19 @@ class CassieIK {
         // Add a frame task to move the left foot relative to the pelvis
         ik_->add_frame_task("fl", fl);
         // Add a frame constraint to keep the foot in place
-        ik_->add_frame_constraint("fr", fr);
+        ik_->add_frame_task("fr", fr);
         // Add a frame task for the pelvis pose within the inertial frame
-        ik_->add_frame_task("pelvis", pelvis, 1);
-        ik_->add_posture_task("posture", posture, 1);
-        // ik_->add_centre_of_mass_task(com);
+        // ik_->add_frame_task("pelvis", pelvis, 1);
+        // ik_->add_posture_task("posture", posture, 1);
+        ik_->add_centre_of_mass_task(com);
 
         // Create data for the program
-        data_ = std::make_unique<ik::dls_data>(*ik_);
+        if (method_ == IKMethod::DLS) {
+            VLOG(10) << "DLS Selected";
+            dls_data_ = std::make_unique<ik::dls_data>(*ik_);
+        } else if (method_ == IKMethod::PIK) {
+            pik_data_ = std::make_unique<ik::pik_data>(*ik_);
+        }
     }
 
     void loop(const rclcpp::Node::SharedPtr& node) {
@@ -79,19 +88,49 @@ class CassieIK {
         ik_->get_frame_task("fl")->target.translation() << 0.0, 0.1,
             -0.6 + 0.2 * sin(0.5 * t);
 
-        ik_->get_frame_task("pelvis")->target.rotation().setIdentity();
-        ik_->get_frame_task("pelvis")->target.translation().x() =
-            0.3 * sin(0.5 * t);
-        ik_->get_frame_task("pelvis")->target.translation().y() = 0.0;
-        ik_->get_frame_task("pelvis")->target.translation().z() = 0.0;
+        ik_->get_centre_of_mass_task()->target << 0.0, 0.0,
+            0.6 + 0.2 * sin(0.5 * t);
 
-        ik::dls_parameters p;
-        // Example parameters
-        p.damping = 1e-2;
-        p.max_iterations = 100;
-        p.step_length = 1e0;
-        // Compute inverse kinematics solution with damped least squares
-        q_ = ik::dls(*ik_, q_, *data_, ik::inverse_kinematics_visitor(), p);
+        // ik_->get_frame_task("pelvis")->target.rotation().setIdentity();
+        // ik_->get_frame_task("pelvis")->target.translation().x() =
+        //     0.3 * sin(0.5 * t);
+        // ik_->get_frame_task("pelvis")->target.translation().y() = 0.0;
+        // ik_->get_frame_task("pelvis")->target.translation().z() = 0.0;
+
+        if (method_ == IKMethod::DLS) {
+            VLOG(10) << "DLS Method";
+            ik::dls_parameters p;
+            // Example parameters
+            p.damping = 1e-2;
+            p.max_iterations = 100;
+            p.step_length = 1e-1;
+
+            // Create configuration vector
+            q_ = ik::vector_t::Zero(ik_->model().nq);
+            // Set quaternion w component to 1.0
+            q_[6] = 1.0;
+    
+            // Compute inverse kinematics solution with damped least squares
+            q_ = ik::dls(*ik_, q_, *dls_data_, ik::inverse_kinematics_visitor(), p);
+        } else if (method_ == IKMethod::PIK) {
+            VLOG(10) << "PIK Method";
+            ik::pik_parameters p;
+            // Example parameters
+            p.damping = 1e-2;
+            p.max_iterations = 100;
+            p.step_length = 1e-2;
+
+            // Create configuration vector
+            q_ = ik::vector_t::Zero(ik_->model().nq);
+            // Set quaternion w component to 1.0
+            q_[6] = 1.0;
+
+            // Compute inverse kinematics solution with damped least squares
+            q_ = ik::pik(*ik_, q_, *pik_data_, ik::inverse_kinematics_visitor(),
+                         p);
+        }
+
+        VLOG(10) << "Result: " << q_.transpose();
         // Display
         urdf_->setConfiguration(q_);
     }
@@ -100,10 +139,14 @@ class CassieIK {
 
    private:
     // Position
-    std::unique_ptr<ik::InverseKinematicsProblem> ik_;
     std::unique_ptr<URDFLoaderNode> urdf_;
+
     ik::vector_t q_;
-    std::unique_ptr<ik::dls_data> data_;
+    std::unique_ptr<ik::InverseKinematicsProblem> ik_;
+    std::unique_ptr<ik::dls_data> dls_data_;
+    std::unique_ptr<ik::pik_data> pik_data_;
+
+    IKMethod method_;
 };
 
 int main(int argc, char** argv) {
@@ -114,7 +157,9 @@ int main(int argc, char** argv) {
     FLAGS_logtostderr = 1;
     FLAGS_colorlogtostderr = 1;
     FLAGS_log_prefix = 1;
-    // FLAGS_v = 10;
+    FLAGS_v = 10;
+
+    google::InitGoogleLogging(argv[0]);
 
     CassieIK urdf;
 

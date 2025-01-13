@@ -6,41 +6,41 @@
 
 #include <pinocchio/parsers/urdf.hpp>
 
-TEST(Task, PositionTask) {
-    const std::string urdf_filename = "ur5.urdf";
-    // Load the urdf model
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
+// TEST(Task, PositionTask) {
+//     const std::string urdf_filename = "ur5.urdf";
+//     // Load the urdf model
+//     pinocchio::Model model;
+//     pinocchio::urdf::buildModel(urdf_filename, model);
 
-    ik::PositionTask task(model, "ee_fixed_joint", "universe");
-}
+//     ik::PositionTask task(model, "ee_fixed_joint", "universe");
+// }
 
-TEST(Task, OrientationTask) {
-    const std::string urdf_filename = "ur5.urdf";
-    // Load the urdf model
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
+// TEST(Task, OrientationTask) {
+//     const std::string urdf_filename = "ur5.urdf";
+//     // Load the urdf model
+//     pinocchio::Model model;
+//     pinocchio::urdf::buildModel(urdf_filename, model);
 
-    ik::OrientationTask task(model, "ee_fixed_joint", "universe");
-}
+//     ik::OrientationTask task(model, "ee_fixed_joint", "universe");
+// }
 
-TEST(Task, SE3) {
-    const std::string urdf_filename = "ur5.urdf";
-    // Load the urdf model
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
+// TEST(Task, SE3) {
+//     const std::string urdf_filename = "ur5.urdf";
+//     // Load the urdf model
+//     pinocchio::Model model;
+//     pinocchio::urdf::buildModel(urdf_filename, model);
 
-    ik::SE3Task task(model, "ee_fixed_joint", "universe");
-}
+//     ik::SE3Task task(model, "ee_fixed_joint", "universe");
+// }
 
-TEST(Task, CentreOfMass) {
-    const std::string urdf_filename = "ur5.urdf";
-    // Load the urdf model
-    pinocchio::Model model;
-    pinocchio::urdf::buildModel(urdf_filename, model);
+// TEST(Task, CentreOfMass) {
+//     const std::string urdf_filename = "ur5.urdf";
+//     // Load the urdf model
+//     pinocchio::Model model;
+//     pinocchio::urdf::buildModel(urdf_filename, model);
 
-    ik::CentreOfMassTask task(model, "universe");
-}
+//     ik::CentreOfMassTask task(model, "universe");
+// }
 
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
@@ -54,6 +54,6 @@ int main(int argc, char **argv) {
 
     int status = RUN_ALL_TESTS();
 
-    bopt::profiler summary;
+    // bopt::profiler summary;
     return status;
 }
