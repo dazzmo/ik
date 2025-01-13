@@ -49,7 +49,7 @@ Eigen::MatrixXd damp_pseudoinverse(const Eigen::Ref<const Eigen::MatrixXd> &M,
 struct pik_data : public problem_data {
     pik_data(const InverseKinematicsProblem &problem) : problem_data(problem) {
         P = matrix_t::Identity(problem.model().nv, problem.model().nv);
-        lambda.assign(problem.max_priority_level() + 1, 1e-1);
+        lambda.assign(problem.max_priority_level() + 1, 1e-6);
 
         da = vector_t::Zero(problem.model().nv);
 
@@ -105,7 +105,7 @@ inline vector_t pik(
 
             // Augment step
             data.dq =
-                data.dq + damp_pseudoinverse(Jbar, data.lambda[i]) * de_bar;
+                data.dq - damp_pseudoinverse(Jbar, data.lambda[i]) * de_bar;
 
             // Update projection
             data.P =

@@ -24,7 +24,6 @@ problem_data::problem_data(const InverseKinematicsProblem &problem) {
 
 void evaluate_problem_data(InverseKinematicsProblem &problem,
                            problem_data &data) {
-    VLOG(10) << "evaluating";
     // Update model
     pinocchio::framesForwardKinematics(problem.model(), data.model_data,
                                        data.q);
