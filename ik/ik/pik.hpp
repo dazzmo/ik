@@ -13,8 +13,8 @@
 #include <pinocchio/algorithm/center-of-mass.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
-#include "ik/problem.hpp"
 #include "ik/data.hpp"
+#include "ik/problem.hpp"
 #include "ik/visitor.hpp"
 
 namespace ik {
@@ -30,17 +30,15 @@ Eigen::MatrixXd damp_pseudoinverse(const Eigen::Ref<const Eigen::MatrixXd> &M,
                                    const double &lambda) {
     // Compute SVD
     auto svd = Eigen::JacobiSVD<Eigen::MatrixXd>(
-        M, Eigen::ComputeFullU | Eigen::ComputeFullV);
-
-    Eigen::MatrixXd U = svd.matrixU();
-    Eigen::MatrixXd V = svd.matrixV();
+        M, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
     // Reconstruct the matrix through SVD
     Eigen::MatrixXd res = Eigen::MatrixXd::Zero(M.cols(), M.rows());
     for (Eigen::Index i = 0; i < svd.singularValues().size(); ++i) {
         double sigma = svd.singularValues()[i];
         double scaling_factor = (sigma / (pow(lambda, 2) + pow(sigma, 2)));
-        res += scaling_factor * V.col(i) * U.col(i).transpose();
+        res += scaling_factor * svd.matrixV().col(i) *
+               svd.matrixU().col(i).transpose();
     }
 
     return res;
@@ -49,7 +47,7 @@ Eigen::MatrixXd damp_pseudoinverse(const Eigen::Ref<const Eigen::MatrixXd> &M,
 struct pik_data : public problem_data {
     pik_data(const InverseKinematicsProblem &problem) : problem_data(problem) {
         P = matrix_t::Identity(problem.model().nv, problem.model().nv);
-        lambda.assign(problem.max_priority_level() + 1, 1e-6);
+        lambda.assign(problem.max_priority_level() + 1, 1.0);
 
         da = vector_t::Zero(problem.model().nv);
 
@@ -85,17 +83,16 @@ inline vector_t pik(
     const pik_parameters &p = pik_parameters()) {
     data.q = q0;
 
+    vector_t de_bar;
+    matrix_t Jbar;
+
     for (std::size_t i = 0; i < p.max_iterations; ++i) {
         // Updata all program data
         evaluate_problem_data(problem, data);
 
-        vector_t de_bar;
-        matrix_t Jbar;
-
         // Initialisation
         data.P.setIdentity();
         data.dq.setZero();
-
 
         for (int i = 0; i <= problem.max_priority_level(); ++i) {
             // Remove contribution of task
