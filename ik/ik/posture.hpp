@@ -8,35 +8,21 @@
 namespace ik {
 
 /**
- * @class PostureTaskTpl
- * @brief This class inherits from `TaskTpl` and provides the functionality to
+ * @class PostureTask
+ * @brief This class inherits from `Task` and provides the functionality to
  * define a task that penalises deviation from a nominal pose, useful for
  * regularising the system and minimising erratic final poses.
  *
- * @tparam ValueType The scalar type used for computations (e.g., `double` or
- * `float`).
- * @tparam IndexType The type used for indexing (default: `std::size_t`).
- * @tparam IntegerType The type used for integer values (default: `int`).
  */
-template <typename ValueType, typename IndexType = std::size_t,
-          typename IntegerType = int>
-class PostureTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
+class PostureTask : public Task {
    public:
-    typedef pinocchio::SE3 se3_t;
-    typedef pinocchio::Motion twist_t;
-
-    typedef TaskTpl<ValueType, IndexType, IntegerType> Base;
-    typedef typename Base::value_type value_type;
-    typedef typename Base::index_type index_type;
-    typedef typename Base::integer_type integer_type;
-
     /**
      * @brief Constructor for creating a frame task.
      *
      * @param model The Pinocchio model of the robot.
      */
-    PostureTaskTpl(const model_t &model, const index_type &nj)
-        : TaskTpl<ValueType, IndexType, IntegerType>(),
+    PostureTask(const model_t &model, const index_t &nj)
+        : Task(),
           nj_(nj),
           target(vector_t::Zero(nj)),
           mask(vector_t::Ones(nj)) {
@@ -47,11 +33,11 @@ class PostureTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
      * @brief Factory method to create a shared pointer to a posture task.
      *
      * @param model The Pinocchio model of the robot.
-     * @return A shared pointer to the created `PostureTaskTpl` instance.
+     * @return A shared pointer to the created `PostureTask` instance.
      */
-    static std::shared_ptr<PostureTaskTpl> create(const model_t &model,
-                                                  const index_type &nj) {
-        return std::make_shared<PostureTaskTpl>(model, nj);
+    static std::shared_ptr<PostureTask> create(const model_t &model,
+                                               const index_t &nj) {
+        return std::make_shared<PostureTask>(model, nj);
     }
 
     /**
@@ -82,8 +68,8 @@ class PostureTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
     }
 
     /**
-     * @brief Target posture for the task, with respect to the specified reference
-     * posture for the task
+     * @brief Target posture for the task, with respect to the specified
+     * reference posture for the task
      *
      */
     vector_t target;
@@ -96,9 +82,7 @@ class PostureTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
     vector_t mask;
 
    protected:
-    index_type nj_;
+    index_t nj_;
 };
-
-typedef PostureTaskTpl<double> PostureTask;
 
 }  // namespace ik

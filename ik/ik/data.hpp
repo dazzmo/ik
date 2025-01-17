@@ -12,7 +12,7 @@ class problem_data {
     problem_data(const InverseKinematicsProblem &problem);
 
     // Pinocchio model data for the associated model
-    pinocchio::Data model_data;
+    data_t model_data;
 
     // Whether the program was successful or not
     bool success = false;

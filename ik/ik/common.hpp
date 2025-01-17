@@ -8,12 +8,16 @@
 
 namespace ik {
 
+typedef int int_t;
+typedef std::size_t index_t;
+typedef double number_t;
+
 typedef std::string string_t;
 
-typedef pinocchio::Model model_t;
-typedef pinocchio::Data data_t;
+typedef pinocchio::ModelTpl<number_t> model_t;
+typedef pinocchio::DataTpl<number_t> data_t;
 
-typedef pinocchio::SE3 se3_t;
+typedef pinocchio::SE3Tpl<number_t> se3_t;
 
 template <typename T, int Size = Eigen::Dynamic>
 using vector_tpl_t = Eigen::Vector<T, Size>;

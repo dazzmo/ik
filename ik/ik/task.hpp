@@ -9,34 +9,17 @@
 
 namespace ik {
 
-template <class T>
-struct task_traits {
-    typedef typename T::value_type value_type;
-    typedef typename T::index_type index_type;
-    typedef typename T::integer_type integer_type;
-};
-
-struct task_attributes {};
-
 /**
  * @brief Representation of a task within an inverse-kinematics context, such as
  * maintaining a frame position, orientation or pose. This could also be related
  * to retaining a nominal joint configuration or a centre of mass position.
  *
- * @tparam ValueType Type for the values used within the task.
- * @tparam IndexType Type for indexing variables in arrays.
- * @tparam IntegerType Type for integer values.
  */
-template <typename ValueType, typename IndexType = std::size_t,
-          typename IntegerType = int>
-class TaskTpl {
-   public:
-    typedef ValueType value_type;
-    typedef IndexType index_type;
-    typedef IntegerType integer_type;
 
-    TaskTpl() : dimension_(index_type(0)) {}
-    TaskTpl(const index_type &dimension) : dimension_(dimension) {
+class Task {
+   public:
+    Task() : dimension_(index_t(0)) {}
+    Task(const index_t &dimension) : dimension_(dimension) {
         set_dimension(dimension);
     }
 
@@ -50,9 +33,9 @@ class TaskTpl {
      * @brief Dimension of the task (specifically, the dimension of the error
      * between a target and a state)
      *
-     * @return index_type
+     * @return index_t
      */
-    index_type dimension() const { return dimension_; }
+    index_t dimension() const { return dimension_; }
 
     vector_t &weighting() { return weighting_; }
 
@@ -62,17 +45,15 @@ class TaskTpl {
      *
      * @param dimension
      */
-    void set_dimension(const index_type &dimension) {
+    void set_dimension(const index_t &dimension) {
         dimension_ = dimension;
         weighting_ = vector_t::Ones(dimension);
     }
 
    private:
     // Dimension of the task
-    index_type dimension_;
+    index_t dimension_;
     vector_t weighting_;
 };
-
-typedef TaskTpl<double> Task;
 
 }  // namespace ik

@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /TF1
       Splitter Ratio: 0.5
     Tree Height: 455
   - Class: rviz_common/Selection
@@ -182,22 +183,103 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz_default_plugins/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: true
-      Marker Scale: 1
+        base_link:
+          Value: true
+        floating_base:
+          Value: true
+        leftfoot:
+          Value: true
+        leftfootback:
+          Value: true
+        leftfootfront:
+          Value: true
+        leftheelspring:
+          Value: true
+        lefthippitch:
+          Value: true
+        lefthiproll:
+          Value: true
+        lefthipyaw:
+          Value: true
+        leftknee:
+          Value: true
+        leftshin:
+          Value: true
+        lefttarsus:
+          Value: true
+        pelvis:
+          Value: true
+        rightfoot:
+          Value: true
+        rightfootback:
+          Value: true
+        rightfootfront:
+          Value: true
+        rightheelspring:
+          Value: true
+        righthippitch:
+          Value: true
+        righthiproll:
+          Value: true
+        righthipyaw:
+          Value: true
+        rightknee:
+          Value: true
+        rightshin:
+          Value: true
+        righttarsus:
+          Value: true
+        vectornav:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 0.5
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
-        {}
+        world:
+          floating_base:
+            base_link:
+              pelvis:
+                lefthiproll:
+                  lefthipyaw:
+                    lefthippitch:
+                      leftknee:
+                        leftshin:
+                          lefttarsus:
+                            leftfoot:
+                              leftfootback:
+                                {}
+                              leftfootfront:
+                                {}
+                            leftheelspring:
+                              {}
+                righthiproll:
+                  righthipyaw:
+                    righthippitch:
+                      rightknee:
+                        rightshin:
+                          righttarsus:
+                            rightfoot:
+                              rightfootback:
+                                {}
+                              rightfootfront:
+                                {}
+                            rightheelspring:
+                              {}
+                vectornav:
+                  {}
       Update Interval: 0
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
-    Background Color: 222; 221; 218
+    Background Color: 61; 56; 70
     Fixed Frame: world
     Frame Rate: 30
   Name: root
@@ -241,25 +323,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.373748540878296
+      Distance: 1.059970736503601
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.9292434453964233
-        Y: -0.4176136255264282
-        Z: -0.12087449431419373
+        X: 0.6059821844100952
+        Y: 0.036388952285051346
+        Z: -0.2138991355895996
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4803984761238098
+      Pitch: 0.3053986728191376
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.388582229614258
+      Yaw: 5.94858455657959
     Saved: ~
 Window Geometry:
   Displays:
@@ -277,5 +359,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1387
-  X: 2196
-  Y: 144
+  X: 244
+  Y: 60

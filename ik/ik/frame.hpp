@@ -9,6 +9,7 @@ namespace ik {
 
 #define FRAME_POSITION_DIM 3
 #define FRAME_ORIENTATION_DIM 3
+#define FRAME_AXIS_ALIGN_DIM 3
 #define FRAME_POSE_DIM 6
 
 /**
@@ -61,11 +62,11 @@ inline void compute_frame_error(
 }
 
 /**
- * @class FrameTaskTpl
+ * @class FrameTask
  * @brief A template class for defining inverse kinematics tasks for specific
  * frames in a robotic system.
  *
- * This class inherits from `TaskTpl` and provides the functionality to define
+ * This class inherits from `Task` and provides the functionality to define
  * tasks associated with specific frames of a robot (e.g., end-effector
  * positions or orientations) relative to a reference frame. It supports three
  * types of tasks: position-only, orientation-only, and full 6D pose (position +
@@ -73,21 +74,9 @@ inline void compute_frame_error(
  *
  * @tparam ValueType The scalar type used for computations (e.g., `double` or
  * `float`).
- * @tparam IndexType The type used for indexing (default: `std::size_t`).
- * @tparam IntegerType The type used for integer values (default: `int`).
  */
-template <typename ValueType, typename IndexType = std::size_t,
-          typename IntegerType = int>
-class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
+class FrameTask : public Task {
    public:
-    typedef pinocchio::SE3 se3_t;
-    typedef pinocchio::Motion twist_t;
-
-    typedef TaskTpl<ValueType, IndexType, IntegerType> Base;
-    typedef typename Base::value_type value_type;
-    typedef typename Base::index_type index_type;
-    typedef typename Base::integer_type integer_type;
-
     /**
      * @brief Constructor for creating a frame task.
      *
@@ -97,25 +86,25 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
      */
-    FrameTaskTpl(const model_t &model, const std::string &frame,
-                 const KinematicType &type = KinematicType::Full,
-                 const std::string &reference_frame = "universe")
-        : TaskTpl<ValueType, IndexType, IntegerType>(),
-          frame(frame),
+    FrameTask(const model_t &model, const std::string &frame,
+              const KinematicType &type = KinematicType::Full,
+              const std::string &reference_frame = "universe")
+        : Task(),
+          target(se3_t::Identity()),
           type(type),
-          reference_frame(reference_frame),
-          target(se3_t::Identity()) {
+          frame(frame),
+          reference_frame(reference_frame) {
         // assert(model.getFrameId(frame) < model.frames().size() &&
         //        "Frame not found in model");
         // assert(model.getFrameId(reference_frame) < model.frames().size() &&
         //    "Reference frame not found in model");
         // Set task dimension based on task type
         if (type == KinematicType::Position) {
-            this->set_dimension(index_type(FRAME_POSITION_DIM));
+            this->set_dimension(index_t(FRAME_POSITION_DIM));
         } else if (type == KinematicType::Orientation) {
-            this->set_dimension(index_type(FRAME_ORIENTATION_DIM));
+            this->set_dimension(index_t(FRAME_ORIENTATION_DIM));
         } else {
-            this->set_dimension(index_type(FRAME_POSE_DIM));
+            this->set_dimension(index_t(FRAME_POSE_DIM));
         }
         // Initialise frame jacobian matrix
         frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
@@ -129,14 +118,13 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
      * @param type The type of task (default: `KinematicType::Full`).
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
-     * @return A shared pointer to the created `FrameTaskTpl` instance.
+     * @return A shared pointer to the created `FrameTask` instance.
      */
-    static std::shared_ptr<FrameTaskTpl> create(
+    static std::shared_ptr<FrameTask> create(
         const model_t &model, const std::string &frame,
         const KinematicType &type = KinematicType::Full,
         const std::string &reference_frame = "universe") {
-        return std::make_shared<FrameTaskTpl>(model, frame, type,
-                                              reference_frame);
+        return std::make_shared<FrameTask>(model, frame, type, reference_frame);
     }
 
     /**
@@ -174,7 +162,7 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
         auto tMf = oMt.actInv(oMf);
 
         // Construct jacobian of the logarithm map
-        Eigen::Matrix<double, 6, 6> Jlog;
+        data_t::Matrix6 Jlog;
         pinocchio::Jlog6(tMf, Jlog);
 
         // Compute Jacobian of end-effector in local frame
@@ -203,47 +191,24 @@ class FrameTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
    protected:
     // Kinematic type of the task
     KinematicType type;
-
-    // Matrix to compute the frame jacobians of the task
-    pinocchio::Data::Matrix6x frame_jacobian_;
-
     // Frame name
     string_t frame;
     // Reference frame name
     string_t reference_frame;
+    // Matrix to compute the frame jacobians of the task
+    pinocchio::Data::Matrix6x frame_jacobian_;
 };
 
-typedef FrameTaskTpl<double> FrameTask;
+enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
 /**
- * @class FrameConstraintTpl
- * @brief A template class for defining an inverse kinematics constraint for a
- * frame, such that the frame is fixed relative to a given reference frame.
+ * @brief Task designed to align a particular axis of an end-effector frame to,
+ * irrespective of the other axes of the frame. Appropriate for contact tasks
+ * where having the end-effector aligned with the contact normal is essential.
  *
- * This class inherits from `ConstraintTpl` and provides the functionality to
- * define constraints associated with specific frames of a robot (e.g.,
- * end-effector positions or orientations) relative to a reference frame. It
- * supports three types of constraints: position-only, orientation-only, and
- * full 6D pose (position + orientation).
- *
- * @tparam ValueType The scalar type used for computations (e.g., `double` or
- * `float`).
- * @tparam IndexType The type used for indexing (default: `std::size_t`).
- * @tparam IntegerType The type used for integer values (default: `int`).
  */
-template <typename ValueType, typename IndexType = std::size_t,
-          typename IntegerType = int>
-class FrameConstraintTpl
-    : public ConstraintTpl<ValueType, IndexType, IntegerType> {
+class AlignAxisTask : public Task {
    public:
-    typedef pinocchio::SE3 se3_t;
-    typedef pinocchio::Motion twist_t;
-
-    typedef ConstraintTpl<ValueType, IndexType, IntegerType> Base;
-    typedef typename Base::value_type value_type;
-    typedef typename Base::index_type index_type;
-    typedef typename Base::integer_type integer_type;
-
     /**
      * @brief Constructor for creating a frame task.
      *
@@ -253,10 +218,133 @@ class FrameConstraintTpl
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
      */
-    FrameConstraintTpl(const model_t &model, const std::string &frame,
-                       const KinematicType &type = KinematicType::Full,
-                       const std::string &reference_frame = "universe")
-        : ConstraintTpl<ValueType, IndexType, IntegerType>(),
+    AlignAxisTask(const model_t &model, const std::string &frame,
+                  const AlignAxisType &axis,
+                  const std::string &reference_frame = "universe")
+        : Task(), axis_(axis), frame(frame), reference_frame(reference_frame) {
+        // Set dimension
+        this->set_dimension(index_t(1));
+        // Initialise frame jacobian matrix
+        frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
+    }
+
+    /**
+     * @brief Factory method to create a shared pointer to a frame task.
+     *
+     * @param model The Pinocchio model of the robot.
+     * @param frame The name of the frame for which the task is defined.
+     * @param type The type of task (default: `KinematicType::Full`).
+     * @param reference_frame The name of the reference frame for the task
+     * (default: "universe").
+     * @return A shared pointer to the created `FrameTask` instance.
+     */
+    static std::shared_ptr<AlignAxisTask> create(
+        const model_t &model, const std::string &frame,
+        const AlignAxisType &axis,
+        const std::string &reference_frame = "universe") {
+        return std::make_shared<AlignAxisTask>(model, frame, axis,
+                                               reference_frame);
+    }
+
+    /**
+     * @brief Computes the tasj error between the current and target frame
+     * configurations.
+     *
+     * @param model The Pinocchio model of the robot.
+     * @param data The Pinocchio data structure for the robot.
+     * @param e The vector to store the computed error.
+     */
+    void compute_error(const model_t &model, data_t &data,
+                       const vector_const_ref_t q, vector_ref_t e) override {
+        // Compute the frame error
+        const auto &oMf = get_transform_frame_to_world(model, data, frame);
+        // Reference Frame to World
+        const auto &oMr =
+            get_transform_frame_to_world(model, data, reference_frame);
+        // Frame to Reference Frame
+        auto rMf = oMr.actInv(oMf);
+        // Get axis of frame with respect to the reference frame
+        Eigen::Ref<const vector3_t> r =
+            rMf.rotation().col(static_cast<Eigen::Index>(axis_));
+
+        // Compute alignment error
+        e << 1.0 - r.dot(target.normalized());
+    }
+
+    /**
+     * @brief Computes the task Jacobian matrix.
+     *
+     * @param model The Pinocchio model of the robot.
+     * @param data The Pinocchio data structure for the robot.
+     * @param jac The matrix to store the computed Jacobian.
+     */
+    void compute_jacobian(const model_t &model, data_t &data,
+                          matrix_ref_t jac) override {
+        // Compute the frame error
+        const auto &oMf = get_transform_frame_to_world(model, data, frame);
+        // Reference Frame to World
+        const auto &oMr =
+            get_transform_frame_to_world(model, data, reference_frame);
+        // Frame to Reference Frame
+        auto rMf = oMr.actInv(oMf);
+
+        // Compute Jacobian of end-effector in local frame
+        pinocchio::getFrameJacobian(model, data, model.getFrameId(frame),
+                                    pinocchio::LOCAL, frame_jacobian_);
+
+        // Create task Jacobian
+        jac = -(rMf.rotation()
+                    .col(static_cast<Eigen::Index>(axis_))
+                    .cross(target.normalized()))
+                   .transpose() *
+              rMf.rotation() * frame_jacobian_.bottomRows(3);
+    }
+
+    /**
+     * @brief Desired axis to align the specified frame axis to
+     *
+     */
+    vector3_t target;
+
+   protected:
+    // Axis of the frame we align
+    AlignAxisType axis_;
+
+    // Frame name
+    string_t frame;
+    // Reference frame name
+    string_t reference_frame;
+    // Matrix to compute the frame jacobians of the task
+    data_t::Matrix6x frame_jacobian_;
+};
+
+/**
+ * @class FrameConstraint
+ * @brief A template class for defining an inverse kinematics constraint for a
+ * frame, such that the frame is fixed relative to a given reference frame.
+ *
+ * This class inherits from `Constraint` and provides the functionality to
+ * define constraints associated with specific frames of a robot (e.g.,
+ * end-effector positions or orientations) relative to a reference frame. It
+ * supports three types of constraints: position-only, orientation-only, and
+ * full 6D pose (position + orientation).
+ *
+ */
+class FrameConstraint : public Constraint {
+   public:
+    /**
+     * @brief Constructor for creating a frame task.
+     *
+     * @param model The Pinocchio model of the robot.
+     * @param frame The name of the frame for which the task is defined.
+     * @param type The type of task (default: `KinematicType::Full`).
+     * @param reference_frame The name of the reference frame for the task
+     * (default: "universe").
+     */
+    FrameConstraint(const model_t &model, const std::string &frame,
+                    const KinematicType &type = KinematicType::Full,
+                    const std::string &reference_frame = "universe")
+        : Constraint(),
           frame(frame),
           type(type),
           reference_frame(reference_frame),
@@ -267,11 +355,11 @@ class FrameConstraintTpl
         //    "Reference frame not found in model");
         // Set task dimension based on task type
         if (type == KinematicType::Position) {
-            this->set_dimension(index_type(FRAME_POSITION_DIM));
+            this->set_dimension(index_t(FRAME_POSITION_DIM));
         } else if (type == KinematicType::Orientation) {
-            this->set_dimension(index_type(FRAME_ORIENTATION_DIM));
+            this->set_dimension(index_t(FRAME_ORIENTATION_DIM));
         } else {
-            this->set_dimension(index_type(FRAME_POSE_DIM));
+            this->set_dimension(index_t(FRAME_POSE_DIM));
         }
         // Initialise frame jacobian matrix
         frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
@@ -288,14 +376,14 @@ class FrameConstraintTpl
      * @param type The type of task (default: `KinematicType::Full`).
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
-     * @return A shared pointer to the created `FrameConstraintTpl` instance.
+     * @return A shared pointer to the created `FrameConstraint` instance.
      */
-    static std::shared_ptr<FrameConstraintTpl> create(
+    static std::shared_ptr<FrameConstraint> create(
         const model_t &model, const std::string &frame,
         const KinematicType &type = KinematicType::Full,
         const std::string &reference_frame = "universe") {
-        return std::make_shared<FrameConstraintTpl>(model, frame, type,
-                                                    reference_frame);
+        return std::make_shared<FrameConstraint>(model, frame, type,
+                                                 reference_frame);
     }
 
     /**
@@ -367,15 +455,13 @@ class FrameConstraintTpl
     KinematicType type;
 
     // Matrix to compute the frame jacobians of the task
-    pinocchio::Data::Matrix6x frame_jacobian_;
-    pinocchio::Data::Matrix6x reference_frame_jacobian_;
+    data_t::Matrix6x frame_jacobian_;
+    data_t::Matrix6x reference_frame_jacobian_;
 
     // Frame name
     string_t frame;
     // Reference frame name
     string_t reference_frame;
 };
-
-typedef FrameConstraintTpl<double> FrameConstraint;
 
 }  // namespace ik

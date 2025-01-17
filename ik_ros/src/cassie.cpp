@@ -44,6 +44,7 @@ class CassieIK {
         // Create leg tasks (with respect to pelvis frame)
         auto fl = ik::FrameTask::create(model, "LeftFootFront",
                                         ik::KinematicType::Position, "pelvis");
+        fl->weighting().setConstant(1e0);
 
         // Frame constraint
         auto fr = ik::FrameTask::create(
@@ -51,10 +52,14 @@ class CassieIK {
 
         // Pelvis orientation tracking task in world frame
         auto pelvis =
-            ik::FrameTask::create(model, "pelvis", ik::KinematicType::Orientation);
+            ik::FrameTask::create(model, "pelvis", ik::KinematicType::Full);
 
         // Centre of mass task, in world frame
         auto com = ik::CentreOfMassTask::create(model);
+
+        auto foot_alignment = ik::AlignAxisTask::create(
+            model, "LeftFootFront", ik::AlignAxisType::AxisY);
+        foot_alignment->target = Eigen::Vector3d::UnitX();
 
         auto posture = ik::PostureTask::create(model, model.nq - 7);
         posture->target.setZero();
@@ -65,13 +70,15 @@ class CassieIK {
         q_[6] = 1.0;
 
         // Add a frame task to move the left foot relative to the pelvis
-        ik_->add_frame_task("fl", fl, 0);
+        ik_->add_frame_task("fl", fl);
         // Add a frame constraint to keep the foot in place
         // ik_->add_frame_task("fr", fr);
         // Add a frame task for the pelvis pose within the inertial frame
-        ik_->add_frame_task("pelvis", pelvis, 1);
+        ik_->add_frame_task("pelvis", pelvis);
         // ik_->add_posture_task("posture", posture, 1);
-        ik_->add_centre_of_mass_task(com, 1);
+        // ik_->add_centre_of_mass_task(com, 1);
+        // Alignment
+        ik_->add_align_axis_task("align", foot_alignment);
 
         // Create data for the program
         if (method_ == IKMethod::DLS) {
@@ -88,15 +95,17 @@ class CassieIK {
         ik_->get_frame_task("fl")->target.translation() << 0.0, 0.1,
             -0.6 + 0.2 * sin(0.5 * t);
 
+        ik_->get_frame_task("pelvis")->target.translation().setZero();
         ik_->get_frame_task("pelvis")->target.rotation().setIdentity();
-        ik_->get_centre_of_mass_task()->target << 0.0, 0.0, 1.0;
+
+        // ik_->get_centre_of_mass_task()->target << 0.0, 0.0, 1.0;
 
         if (method_ == IKMethod::DLS) {
             VLOG(10) << "DLS Method";
             ik::dls_parameters p;
             // Example parameters
-            p.damping = 1e-2;
-            p.max_iterations = 100;
+            p.damping = 1e-1;
+            p.max_iterations = 200;
             p.step_length = 1e-1;
 
             // Compute inverse kinematics solution with damped least squares
@@ -107,7 +116,7 @@ class CassieIK {
             ik::pik_parameters p;
             // Example parameters
             p.damping = 1e-2;
-            p.max_iterations = 100;
+            p.max_iterations = 200;
             p.step_length = 1e0;
 
             // Compute inverse kinematics solution with damped least squares
@@ -148,7 +157,7 @@ int main(int argc, char** argv) {
 
     CassieIK urdf;
 
-    urdf.init(node, CassieIK::IKMethod::PIK);
+    urdf.init(node, CassieIK::IKMethod::DLS);
     while (rclcpp::ok()) {
         rclcpp::spin_some(node);
 

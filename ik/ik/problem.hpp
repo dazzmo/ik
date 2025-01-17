@@ -91,6 +91,19 @@ class InverseKinematicsProblem {
         }
     }
 
+    std::shared_ptr<AlignAxisTask> add_align_axis_task(
+        const std::string &name, const std::shared_ptr<AlignAxisTask> &task,
+        const std::size_t &priority = 0) {
+        // Insert into map
+        axis_tasks_map_.insert({name, axis_tasks_.size()});
+        // Create shared axis task
+        axis_tasks_.push_back(task);
+        // Add to task vector
+        tasks_[priority].push_back(task);
+        // Return pointer to task
+        return axis_tasks_.back();
+    }
+
     std::shared_ptr<CentreOfMassTask> add_centre_of_mass_task(
         const std::shared_ptr<CentreOfMassTask> &task,
         const std::size_t &priority = 0) {
@@ -168,6 +181,10 @@ class InverseKinematicsProblem {
     // Frame tasks
     std::vector<std::shared_ptr<FrameTask>> frame_tasks_;
     std::unordered_map<string_t, std::size_t> frame_tasks_map_;
+
+    // Axis alignment tasks
+    std::vector<std::shared_ptr<AlignAxisTask>> axis_tasks_;
+    std::unordered_map<string_t, std::size_t> axis_tasks_map_;
 
     // Frame constraints
     std::vector<std::shared_ptr<FrameConstraint>> frame_constraints_;

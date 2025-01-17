@@ -10,24 +10,11 @@ namespace ik {
 /**
  * @brief Task for the centre of mass location (a 3D point in space).
  *
- * @tparam ValueType The scalar type used for computations (e.g., `double` or
- * `float`).
- * @tparam IndexType The type used for indexing (default: `std::size_t`).
- * @tparam IntegerType The type used for integer values (default: `int`).
  */
-template <typename ValueType, typename IndexType = std::size_t,
-          typename IntegerType = int>
-class CentreOfMassTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
+class CentreOfMassTask : public Task {
    public:
-    typedef TaskTpl<ValueType, IndexType, IntegerType> Base;
-    typedef typename Base::value_type value_type;
-    typedef typename Base::index_type index_type;
-    typedef typename Base::integer_type integer_type;
-
-    CentreOfMassTaskTpl(const model_t &model,
-                        const std::string &reference_frame)
-        : TaskTpl<ValueType, IndexType, IntegerType>(3),
-          reference_frame(reference_frame) {};
+    CentreOfMassTask(const model_t &model, const std::string &reference_frame)
+        : Task(3), reference_frame(reference_frame) {};
 
     /**
      * @brief Factory method to create a shared pointer to a centre of mass
@@ -36,11 +23,11 @@ class CentreOfMassTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
      * @param model The Pinocchio model of the robot.
      * @param reference_frame The name of the reference frame for the centre of
      * mass (default: "universe").
-     * @return A shared pointer to the created `CentreOfMassTaskTpl` instance.
+     * @return A shared pointer to the created `CentreOfMassTask` instance.
      */
-    static std::shared_ptr<CentreOfMassTaskTpl> create(
+    static std::shared_ptr<CentreOfMassTask> create(
         const model_t &model, const std::string &reference_frame = "universe") {
-        return std::make_shared<CentreOfMassTaskTpl>(model, reference_frame);
+        return std::make_shared<CentreOfMassTask>(model, reference_frame);
     }
 
     void compute_error(const model_t &model, data_t &data,
@@ -63,11 +50,5 @@ class CentreOfMassTaskTpl : public TaskTpl<ValueType, IndexType, IntegerType> {
    private:
     string_t reference_frame;
 };
-
-/**
- * @copybrief CentreOfMassTaskTpl()
- *
- */
-typedef CentreOfMassTaskTpl<double> CentreOfMassTask;
 
 }  // namespace ik

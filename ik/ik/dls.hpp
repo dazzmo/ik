@@ -11,8 +11,8 @@
 #include <pinocchio/algorithm/center-of-mass.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
-#include "ik/problem.hpp"
 #include "ik/data.hpp"
+#include "ik/problem.hpp"
 #include "ik/visitor.hpp"
 
 namespace ik {
@@ -32,11 +32,11 @@ class dls_data : public problem_data {
    public:
     dls_data(const InverseKinematicsProblem &problem) : problem_data(problem) {
         
-        std::size_t e_sz = 0, c_sz = 0;
+        index_t e_sz = 0, c_sz = 0;
         for (int i = 0; i <= problem.max_priority_level(); ++i) {
             e_sz += problem.e_size(i);
         }
-        
+
         c_sz = problem.c_size();
 
         et = vector_t::Zero(e_sz);
@@ -116,13 +116,13 @@ inline vector_t dls(
     auto constraints = problem.get_all_constraints();
 
     // Perform iterations
-    for (std::size_t i = 0; i < p.max_iterations; ++i) {
+    for (index_t i = 0; i < p.max_iterations; ++i) {
         // Updata all program data
         evaluate_problem_data(problem, data);
 
-        std::size_t cnt = 0;
+        index_t cnt = 0;
         // Get all priority 0 tasks
-        for (std::size_t p = 0; p <= problem.max_priority_level(); ++p) {
+        for (index_t p = 0; p <= problem.max_priority_level(); ++p) {
             data.et.middleRows(cnt, data.e[p].rows()) << data.e[p];
             data.Jt.middleRows(cnt, data.J[p].rows()) << data.J[p];
             cnt += data.e[p].rows();
