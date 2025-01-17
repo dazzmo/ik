@@ -345,10 +345,10 @@ class FrameConstraint : public Constraint {
                     const KinematicType &type = KinematicType::Full,
                     const std::string &reference_frame = "universe")
         : Constraint(),
-          frame(frame),
+          target(se3_t::Identity()),
           type(type),
-          reference_frame(reference_frame),
-          target(se3_t::Identity()) {
+          frame(frame),
+          reference_frame(reference_frame) {
         // assert(model.getFrameId(frame) < model.frames().size() &&
         //        "Frame not found in model");
         // assert(model.getFrameId(reference_frame) < model.frames().size() &&

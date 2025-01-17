@@ -23,9 +23,9 @@ class PostureTask : public Task {
      */
     PostureTask(const model_t &model, const index_t &nj)
         : Task(),
-          nj_(nj),
           target(vector_t::Zero(nj)),
-          mask(vector_t::Ones(nj)) {
+          mask(vector_t::Ones(nj)),
+          nj_(nj) {
         this->set_dimension(nj);
     }
 

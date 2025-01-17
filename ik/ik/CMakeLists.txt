@@ -6,6 +6,8 @@ find_package(pinocchio REQUIRED)
 SET(${PROJECT_NAME}_SOURCES
 common.cpp
 data.cpp
+dls.cpp
+pik.cpp
 problem.cpp
 )
 
