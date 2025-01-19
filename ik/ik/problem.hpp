@@ -104,6 +104,20 @@ class InverseKinematicsProblem {
         return axis_tasks_.back();
     }
 
+    std::shared_ptr<AlignAxisTask> get_align_axis_task(
+        const std::string &name) {
+        return axis_tasks_[get_frame_task_index(name)];
+    }
+
+    std::size_t get_align_axis_task_index(const string_t &name) {
+        if (axis_tasks_map_.find(name) != axis_tasks_map_.end()) {
+            return axis_tasks_map_.at(name);
+        } else {
+            assert("Frame task does not exist!");
+            return axis_tasks_map_.size();
+        }
+    }
+
     std::shared_ptr<CentreOfMassTask> add_centre_of_mass_task(
         const std::shared_ptr<CentreOfMassTask> &task,
         const std::size_t &priority = 0) {

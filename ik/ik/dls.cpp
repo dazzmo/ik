@@ -3,8 +3,8 @@
 namespace ik {
 
 vector_t dls(InverseKinematicsProblem &problem, const vector_t &q0,
-                    dls_data &data, const inverse_kinematics_visitor &visitor,
-                    const dls_parameters &p) {
+             dls_data &data, const inverse_kinematics_visitor &visitor,
+             const dls_parameters &p) {
     data.q = q0;
 
     // todo - if limited convergence, try random walk
