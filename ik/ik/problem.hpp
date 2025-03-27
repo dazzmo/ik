@@ -14,7 +14,7 @@ class InverseKinematicsProblem {
      *
      * @param model
      */
-    InverseKinematicsProblem(model_t &model,
+    InverseKinematicsProblem(const model_t &model,
                              const std::size_t &max_priority_level = 0)
         : model_(model),
           max_priority_level_(max_priority_level),
