@@ -21,7 +21,7 @@
 /doc/latex
 
 # (Possible) CMake build artifacts
-/build/
+build/
 /cmake-build-*/
 
 # Bazel build artifacts (symlinks)

@@ -17,6 +17,8 @@ pinocchio::pinocchio
 glog
 )
 
+# Check if google logging is required
+
 include(GNUInstallDirs)
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_SOURCES})
