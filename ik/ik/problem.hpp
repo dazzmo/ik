@@ -1,10 +1,56 @@
 #pragma once
 
+#include <casadi/casadi.hpp>
+
 #include "ik/centre_of_mass.hpp"
 #include "ik/frame.hpp"
 #include "ik/posture.hpp"
 
 namespace ik {
+
+class InverseKinematicsSolver {
+   public:
+    using TaskPtr = std::shared_ptr<TaskAbstract>;
+
+    InverseKinematicsSolver(const Configuration &cfg,
+                            const String &solver = "qpoases") {}
+
+    void addTask(const TaskPtr &task) {}
+    void addTasks(const std::vector<TaskPtr> &tasks) {}
+
+    void init() { is_init_ = true; }
+
+    void solve() {
+        // Construct inverse kinematics
+        Eigen::MatrixXd H;
+        Eigen::VectorXd g;
+
+        Eigen::VectorXd lbx;
+        Eigen::VectorXd ubx;
+
+        for (const auto &task : tasks_) {
+            // Determine the error and Jacobian
+            task->computeJacobian(cfg, J);
+            // Cost || J v + e ||_2
+            H += J.transpose() * task->getWeighting() * J;
+            g += 2.0 * J.transpose() * e;
+
+            // Solver
+        }
+
+        ubx = cfg.model.velocityLimit;
+        lbx = -cfg.model.velocityLimit;
+
+        // Compute solver
+        
+    };
+
+   private:
+    bool is_init_;
+    std::vector<TaskPtr> tasks_;
+
+    casadi::Function qp_;
+};
 
 class InverseKinematicsProblem {
    public:
