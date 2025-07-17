@@ -4,7 +4,6 @@
 
 #include "ik/Configuration.hpp"
 #include "ik/Types.hpp"
-#include "ik/common.hpp"
 
 namespace ik {
 
@@ -23,25 +22,61 @@ class TaskAbstract {
     const Vector &getWeighting() const { return weighting_; }
 
     virtual void computeError(const Configuration &cfg,
-                              Eigen::Ref<VectorX> e) = 0;
+                              Eigen::Ref<Vector> e) = 0;
     virtual void computeJacobian(const Configuration &cfg,
-                                 Eigen::Ref<MatrixX> jac) = 0;
+                                 Eigen::Ref<Matrix> jac) = 0;
+
+    Vector computeError(const Configuration &cfg) {
+        Vector e = Vector::Zero(this->getDimension());
+        computeError(cfg, e);
+        return e;
+    }
+
+    Matrix computeJacobian(const Configuration &cfg) {
+        Matrix J = Matrix::Zero(this->getDimension(), cfg.nv());
+        computeJacobian(cfg, J);
+        return J;
+    }
+
+    void addToQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
+                          Eigen::Ref<Vector> g) {
+        const auto WJ =
+            this->getWeighting().asDiagonal() * computeJacobian(cfg);
+        const auto We =
+            -(this->getWeighting().asDiagonal() * computeError(cfg));
+
+        H += WJ.transpose() * WJ +
+             0.001 * Eigen::MatrixXd::Identity(this->getDimension(),
+                                               this->getDimension());
+        std::cout << H << std::endl;
+        g += -We.transpose() * WJ;
+    }
+
+    void computeQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
+                            Eigen::Ref<Vector> g) {
+        addToQPObjective(cfg, H, g);
+    }
 
    protected:
     TaskAbstract() : dimension_(0), weighting_(Vector::Zero(0)) {}
     TaskAbstract(const Size &dimension)
         : dimension_(dimension), weighting_(Vector::Ones(dimension)) {}
 
+    /// @brief The weighting vector
+    Vector weighting_;
+
    private:
     Size dimension_;
-    Vector weighting_;
 };
 
 template <typename _TargetType>
-class Task {
+class Task : public TaskAbstract {
    public:
     /// @brief The type of the task's target
     using TargetType = _TargetType;
+
+    Task() : TaskAbstract() {}
+    Task(const Size &dimension) : TaskAbstract(dimension) {}
 
     void setTarget(const TargetType &target) { target_ = target; }
     const TargetType &getTarget() const { return target_; }

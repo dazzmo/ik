@@ -8,9 +8,7 @@ enable_testing()
 
 # Create list of files
 SET(TEST_FILES
-ik.cpp
-dls.cpp
-task.cpp
+solver.cpp
 )
 
 include(GoogleTest)

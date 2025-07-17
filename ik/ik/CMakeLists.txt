@@ -1,23 +1,19 @@
 find_package(Boost REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 find_package(pinocchio REQUIRED)
+find_package(casadi REQUIRED)
 
 # Collect source files
 SET(${PROJECT_NAME}_SOURCES
-common.cpp
-data.cpp
-dls.cpp
-pik.cpp
-problem.cpp
+Solver.cpp
 )
 
 SET(${PROJECT_NAME}_LIBRARIES
 Eigen3::Eigen
+casadi
 pinocchio::pinocchio
-glog
 )
 
-# Check if google logging is required
 
 include(GNUInstallDirs)
 

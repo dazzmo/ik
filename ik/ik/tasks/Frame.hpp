@@ -2,8 +2,7 @@
 
 #include <pinocchio/algorithm/frames.hpp>
 
-#include "ik/constraint.hpp"
-#include "ik/task.hpp"
+#include "ik/Task.hpp"
 
 namespace ik {
 
@@ -23,7 +22,8 @@ namespace ik {
  */
 class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
    public:
-    FrameTask(const String &frame) : frame_(frame) {}
+    FrameTask(const String &frame)
+        : Task<pinocchio::SE3Tpl<Real>>(6), frame_(frame) {}
 
     const String &frame() const { return frame_; }
 
@@ -33,11 +33,11 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      *
      * @param cost
      */
-    void setPositionCost(const Vector3d &cost) {
+    void setPositionCost(const Eigen::Vector3<Real> &cost) {
         this->weighting_.topRows(3) = cost;
     }
     /**
-     * @copydoc FrameTask::setPositionCost(const Vector3d &)
+     * @copydoc FrameTask::setPositionCost(const Eigen::Vector3<Real> &)
      */
     void setPositionCost(const Real &cost) {
         this->weighting_.topRows(3).setConstant(cost);
@@ -49,7 +49,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      *
      * @param cost
      */
-    void setOrientationCost(const Vector3d &cost) {
+    void setOrientationCost(const Eigen::Vector3<Real> &cost) {
         this->weighting_.bottomRows(3) = cost;
     }
     void setOrientationCost(const Real &cost) {
@@ -63,7 +63,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      * @param cfg
      * @param e
      */
-    void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
+    void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override {
         const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
         // Target to World
         auto oMt = this->getTarget();
@@ -81,7 +81,8 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      * @param cfg
      * @param e
      */
-    void computeErrorJacobian(const Configuration &cfg, Eigen::Ref<Matrix> J) {
+    void computeJacobian(const Configuration &cfg,
+                         Eigen::Ref<Matrix> J) override {
         // Frame to World
         const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
         // Target to World
@@ -93,7 +94,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
         pinocchio::Data::Matrix6 Jlog;
         pinocchio::Jlog6(tMf, Jlog);
         // Compute Jacobian of end-effector in local frame
-        J = -Jlog * cfg.getJacobian(this->frame())
+        J = -Jlog * cfg.getFrameJacobian(this->frame());
     }
 
     void setTargetFromConfiguration(const Configuration &cfg) {

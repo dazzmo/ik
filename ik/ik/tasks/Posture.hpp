@@ -1,9 +1,6 @@
 #pragma once
 
-#include <pinocchio/algorithm/frames.hpp>
-
-#include "ik/constraint.hpp"
-#include "ik/task.hpp"
+#include "ik/Task.hpp"
 
 namespace ik {
 
