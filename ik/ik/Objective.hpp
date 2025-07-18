@@ -13,17 +13,16 @@ namespace ik {
  * to retaining a nominal joint configuration or a centre of mass position.
  *
  */
-class TaskAbstract {
+class ObjectiveAbstract {
    public:
     using Vector = Eigen::VectorX<Real>;
     using Matrix = Eigen::MatrixX<Real>;
 
-    Size getDimension() const { return dimension_; }
     const Vector &getWeighting() const { return weighting_; }
 
-    virtual void computeError(const Configuration &cfg,
-                              Eigen::Ref<Vector> e) = 0;
-    virtual void computeJacobian(const Configuration &cfg,
+    virtual void computeObjective(const Configuration &cfg,
+                                  Eigen::Ref<Vector> e) = 0;
+    virtual void computeGradient(const Configuration &cfg,
                                  Eigen::Ref<Matrix> jac) = 0;
 
     Vector computeError(const Configuration &cfg) {
@@ -40,12 +39,13 @@ class TaskAbstract {
 
     void addToQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
                           Eigen::Ref<Vector> g) {
-        Matrix W = this->getWeighting().asDiagonal();
-        Matrix J = computeJacobian(cfg);
-        Vector e = computeError(cfg);
 
-        H += J.transpose() * W * J;
-        g += J.transpose() * W * e;
+        // Minimise the gravito-inertial torques
+        Vector G;
+        // Express this in terms of velocities?
+        // c(q) = G^T G
+        // \dot c = dc/dq dq/dt = ...
+        // ||J v ||
     }
 
     void computeQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,

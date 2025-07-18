@@ -13,12 +13,7 @@ namespace ik {
  *
  * This class inherits from `Task` and provides the functionality to define
  * tasks associated with specific frames of a robot (e.g., end-effector
- * positions or orientations) relative to a reference frame. It supports three
- * types of tasks: position-only, orientation-only, and full 6D pose (position +
- * orientation).
- *
- * @tparam ValueType The scalar type used for computations (e.g., `double` or
- * `float`).
+ * positions or orientations).
  */
 class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
    public:
@@ -69,6 +64,9 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
         auto oMt = this->getTarget();
         // Target to Frame
         auto fMt = oMf.actInv(oMt);
+        std::cout << "oMf " << oMf << std::endl;
+        std::cout << "oMt " << oMt << std::endl;
+        std::cout << "fMt " << fMt << std::endl;
         // Compute error between target frame and the current frame of the
         // system
         e = pinocchio::log6(fMt).toVector();

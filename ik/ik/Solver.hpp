@@ -23,7 +23,10 @@ class InverseKinematicsSolver {
         }
     }
 
-    void init(const Configuration &cfg, const String &solver = "qpoases");
+    void clearTasks() { tasks_.clear(); }
+
+    void init(const Configuration &cfg, const String &solver = "qpoases",
+              const QPSolver::Options &opts = {});
 
     Vector solve(const Configuration &cfg);
 

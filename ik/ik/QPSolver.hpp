@@ -16,6 +16,8 @@ namespace ik {
  */
 class QPSolver {
    public:
+    using Options = casadi::Dict;
+
     using Matrix = Eigen::MatrixX<Real>;
     using Vector = Eigen::VectorX<Real>;
 
@@ -35,7 +37,7 @@ class QPSolver {
     };
 
     QPSolver(const Size &nx, const Size &nc,
-             const std::string &solver = "qpoases")
+             const std::string &solver = "qpoases", const Options &opts = {})
         : out_(nx, nc) {
         using SX = casadi::SX;
         // Create the program to take in arbitrary hessian and cost matrix of a
@@ -55,7 +57,7 @@ class QPSolver {
 
         // Create quadratic solver
         qp_ = casadi::qpsol("solver", solver,
-                            {{"f", f}, {"g", c}, {"p", p}, {"x", x}});
+                            {{"f", f}, {"g", c}, {"p", p}, {"x", x}}, opts);
     }
 
     void solve(const Eigen::Ref<const Matrix> &H,
@@ -67,6 +69,7 @@ class QPSolver {
                const Eigen::Ref<const Vector> &lbx) {
         // Create a vector for the parameters?
         Vector p(H.size() + g.size() + A.size());
+        // Create row-wise views of the data
         p << Eigen::Map<const Vector>(H.data(), H.size()), g,
             Eigen::Map<const Vector>(A.data(), A.size());
 

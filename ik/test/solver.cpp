@@ -29,31 +29,40 @@ int main(int argc, char **argv) {
     auto frame_task = std::make_shared<ik::FrameTask>(ee_frame);
     frame_task->setTargetFromConfiguration(cfg);
 
-    auto T = frame_task->getTarget();
-    T.translation().y() += 0.1;
+    pinocchio::SE3 T = frame_task->getTarget();
+    T.translation().x() += 0.01;
     frame_task->setTarget(T);
 
     // Create a solver
     auto solver = ik::InverseKinematicsSolver();
     solver.addTask(frame_task);
-    solver.init(cfg);
+    ik::QPSolver::Options options;
+    solver.init(cfg, "qpoases", options);
 
-    frame_task->setOrientationCost(0.0);
+    frame_task->setOrientationCost(1e-1);
 
     // Compute the new error
 
-    Eigen::VectorXd e(6);
     std::cout << cfg.configuration() << std::endl;
 
+    // for (int i = 0; i < 20; ++i) {
     auto dv = solver.solve(cfg);
-    cfg.integrateInPlace(dv, 1.0);
-    std::cout << cfg.configuration() << std::endl;
-    frame_task->computeError(cfg, e);
-    std::cout << e << std::endl;
 
-    dv = solver.solve(cfg);
+    std::cout << "dv = " << dv << std::endl;
+
+    // Assess the error
+    Eigen::MatrixXd J = Eigen::MatrixXd::Zero(6, model.nv);
+    Eigen::VectorXd e = Eigen::VectorXd::Zero(6);
+    frame_task->computeError(cfg, e);
+    frame_task->computeJacobian(cfg, J);
+
+    std::cout << e << std::endl;
+    std::cout << "w " << frame_task->getWeighting() << std::endl;
+    std::cout << (J * dv + e).transpose() *
+                     frame_task->getWeighting().asDiagonal() * (J * dv + e)
+              << std::endl;
     cfg.integrateInPlace(dv, 1.0);
-    std::cout << cfg.configuration() << std::endl;
+
     frame_task->computeError(cfg, e);
     std::cout << e << std::endl;
 

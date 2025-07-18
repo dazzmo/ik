@@ -3,11 +3,12 @@
 namespace ik {
 
 void InverseKinematicsSolver::init(const Configuration &cfg,
-                                   const String &solver) {
+                                   const String &solver,
+                                   const QPSolver::Options &opts) {
     // Create quadratic program
     // todo - add up any hard constraints
 
-    qp_ = std::make_unique<QPSolver>(cfg.nv(), 0, solver);
+    qp_ = std::make_unique<QPSolver>(cfg.nv(), 0, solver, opts);
 
     is_init_ = true;
 }
@@ -38,14 +39,9 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
     ubx = cfg.model().velocityLimit;
     lbx = -cfg.model().velocityLimit;
 
-    std::cout << H << std::endl;
-    std::cout << g << std::endl;
-    std::cout << ubx << std::endl;
-    std::cout << lbx << std::endl;
-
     // Solve
     qp_->solve(H, g, A, ubA, lbA, ubx, lbx);
-
+    std::cout << "f = " << qp_->getObjective() << std::endl;
     // Return the change in velocity needed
     return qp_->getPrimalSolution();
 };

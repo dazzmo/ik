@@ -17,7 +17,7 @@ class Configuration {
                   const std::shared_ptr<Data> &data, const Vector &q0)
         : model_(model), data_(data), q0_(q0), q_(q0) {
         update(q_);
-        //fixme use the actual dimensions at compile time
+        // fixme use the actual dimensions at compile time
         jacobian_ = Matrix::Zero(6, model->nv);
     }
 
@@ -27,6 +27,7 @@ class Configuration {
     const Model &model() const { return *model_; }
 
     void update(const Vector &q, bool compute_jacobians = true) {
+        this->q_ = q;
         pinocchio::framesForwardKinematics(*model_, *data_, q);
         if (compute_jacobians) {
             pinocchio::computeJointJacobians(*model_, *data_, q);
@@ -60,7 +61,10 @@ class Configuration {
     }
 
     void integrateInPlace(const Vector &v, const Real &dt) {
+        std::cout << "q before " << this->q_ << std::endl;
         this->q_ = integrate(v, dt);
+        std::cout << "q after " << this->q_ << std::endl;
+        this->update(this->q_);
     }
 
     Vector integrate(const Vector &v, const Real &dt) {
