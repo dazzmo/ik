@@ -4,11 +4,9 @@
 
 <!-- PROJECT LOGO -->
 <br>
-<div align="center">
-
-  <h1 align="center">Puppeteer - An Inverse Kinematics Engine</h1>
-
-  <p align="left">
+<div>
+  <h1>Cink - The C++ Adaptation of the Pink Differentiable Inverse Kinematics Library </h1>
+  <p>
     A work-in-progress implementation of a basic inverse kinematics engine
   </p>
 </div>
@@ -16,26 +14,19 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 <p align="left">
-</p>
-<p align="right">(<a href="#readme-top">back to top</a>)
-</p>
+This project is a C++ adaptation of Stephane Caron's pink python package, utilising the Pinocchio library in its native C++ for efficient derivation and computation of inverse kinematics. 
 
-## Getting Started
-<a name="getting-started"></a>
+For solving the quadratic programs that arise from this problem formulation, we use CasADi's solver wrappers for quadratic programs, allowing users to specify a supported QP solver similarly to qpsolvers in Python.
+
+## Installation
+<a name="installation"></a>
 
 ### Prerequisites
-ik requires the following third-party libraries in order to be built and installed.
+Cink requires the following third-party libraries in order to be built and installed.
 * [pinocchio]()
+* [casadi]() (Installed with any desired QP solvers for `qpsol()` - see here)
 
-For testing purposes we have (this is later be a toggle-able option):
-* [googletest](https://github.com/google/googletest)
-* [glog](https://github.com/google/glog)
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-### Installation
-<a name="installation"></a>
+### Building
 
 1. Clone the repo
    ```sh
@@ -52,22 +43,12 @@ For testing purposes we have (this is later be a toggle-able option):
     ```sh
     make install
     ```
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- LICENSE -->
-## License
-
-Distributed under the GNU LESSER GENERAL PUBLIC LICENSE License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTACT -->
 ## Contact
 
 Damian Abood - damian.abood@sydney.edu.au
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ## Acknowledgements
-
+This package was inspired by Stephane Caron's pink python package
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

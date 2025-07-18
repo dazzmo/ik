@@ -1,59 +1,51 @@
-cmake_minimum_required(VERSION 3.20)
-project(ik VERSION 0.0.1)
+find_package(Boost REQUIRED)
+find_package(Eigen3 3.3 REQUIRED)
+find_package(pinocchio REQUIRED)
+find_package(casadi REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "-O3 -fPIC -O3")
-
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
-
-IF(APPLE)
-    # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
-    LINK_DIRECTORIES(/usr/local/lib)
-ENDIF()
-
-# Add ik library
-add_subdirectory(ik)
-
-option(BUILD_TESTS "Build ik with tests" OFF)
-if(BUILD_TESTS)
-  add_subdirectory(test)
-endif(BUILD_TESTS)
-
-## We install the export that we defined above
-## Export the targets to a script
-## This will install the import script ikTargets.cmake
-## When findpackaged by other scripts, it will load the targets defined
-## in the export ik-export.
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/ikConfigVersion.cmake
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY AnyNewerVersion
+# Collect source files
+SET(${PROJECT_NAME}_SOURCES
+Solver.cpp
 )
 
-# Create ikConfig.cmake with extra info from ikConfig.cmake.in
-# This file is necessary to find_package the library ikConfig.
-set(INSTALL_CONFIGDIR lib/cmake/ik)
-
-configure_package_config_file(
-  ${CMAKE_CURRENT_LIST_DIR}/cmake/ikConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ikConfig.cmake
-  INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+SET(${PROJECT_NAME}_LIBRARIES
+Eigen3::Eigen
+casadi
+pinocchio::pinocchio
 )
 
-# Install config and export files
-install(EXPORT ik-export
-  FILE ikTargets.cmake
-  DESTINATION ${INSTALL_CONFIGDIR}
-  NAMESPACE ik::
+include(GNUInstallDirs)
+
+add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_SOURCES})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LIBRARIES})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+message("CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR}")
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+    # "$<INSTALL_INTERFACE:include>"
 )
 
-## Install the config and configversion
-install(FILES
-${CMAKE_CURRENT_BINARY_DIR}/ikConfig.cmake
-${CMAKE_CURRENT_BINARY_DIR}/ikConfigVersion.cmake
-# ${CMAKE_CURRENT_LIST_DIR}/cmake/FindGflags.cmake
-# ${CMAKE_CURRENT_LIST_DIR}/cmake/FindGlog.cmake
-DESTINATION ${INSTALL_CONFIGDIR}
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-unused-parameter -pipe)
+
+add_library(ik::ik ALIAS ${PROJECT_NAME})
+
+## First of all, we need to install the library itself.
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ik-export
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    # Perhaps use this, instead of installing include dir
+    #PUBLIC_HEADER DESTINATION include
+    INCLUDES DESTINATION include # We need this right?
+    RUNTIME DESTINATION bin
+)
+
+# Install header files
+install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+  DESTINATION include
+  FILES_MATCHING PATTERN "*.hpp"
 )
