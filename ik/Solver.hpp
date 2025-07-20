@@ -2,6 +2,7 @@
 
 #include <casadi/casadi.hpp>
 
+#include "ik/Barrier.hpp"
 #include "ik/Limit.hpp"
 #include "ik/QPSolver.hpp"
 #include "ik/Task.hpp"
@@ -14,6 +15,7 @@ class InverseKinematicsSolver {
 
     using TaskPtr = std::shared_ptr<TaskAbstract>;
     using LimitPtr = std::shared_ptr<LimitAbstract>;
+    using BarrierPtr = std::shared_ptr<BarrierAbstract>;
 
     InverseKinematicsSolver() : qp_(nullptr), damping_(0.0) {}
 
@@ -34,8 +36,16 @@ class InverseKinematicsSolver {
         }
     }
 
+    void addBarrier(const BarrierPtr &barrier) { barriers_.push_back(barrier); }
+    void addBarriers(const std::vector<BarrierPtr> &barriers) {
+        for (const auto &barrier : barriers) {
+            addBarrier(barrier);
+        }
+    }
+
     void clearTasks() { tasks_.clear(); }
     void clearLimits() { limits_.clear(); }
+    void clearBarriers() { barriers_.clear(); }
 
     void setDamping(const Real &value) { damping_ = value; }
 
@@ -45,6 +55,7 @@ class InverseKinematicsSolver {
     bool is_init_;
     std::vector<TaskPtr> tasks_;
     std::vector<LimitPtr> limits_;
+    std::vector<BarrierPtr> barriers_;
 
     Real damping_;
     std::unique_ptr<QPSolver> qp_;

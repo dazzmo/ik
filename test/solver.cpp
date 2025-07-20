@@ -3,25 +3,33 @@
 
 #include <pinocchio/parsers/urdf.hpp>
 
+#include "ik/barriers/SelfCollision.hpp"
 #include "ik/limits/Configuration.hpp"
 #include "ik/limits/Velocity.hpp"
 #include "ik/tasks/Frame.hpp"
 
 int main(int argc, char **argv) {
     // Load a model
-    const std::string urdf_filename = "ur5.urdf";
+    const std::string urdf_filename = "./ur_description/urdf/ur5_robot.urdf";
     pinocchio::Model model;
     pinocchio::urdf::buildModel(urdf_filename, model);
 
     auto pmodel = std::make_shared<pinocchio::Model>(model);
     auto pdata = std::make_shared<pinocchio::Data>(model);
 
+    // Create geometry data
+    auto pgmodel = std::make_shared<pinocchio::GeometryModel>();
+    pinocchio::urdf::buildGeom(model, urdf_filename, pinocchio::COLLISION,
+                               *pgmodel, "./ur_description/");
+    pgmodel->addAllCollisionPairs();
+
+    auto pgdata = std::make_shared<pinocchio::GeometryData>(*pgmodel);
+
     // Create configuration
-    auto cfg =
-        ik::Configuration(pmodel, pdata, Eigen::VectorXd::Zero(model.nq));
+    auto cfg = ik::Configuration(pmodel, pdata, Eigen::VectorXd::Zero(model.nq),
+                                 pgmodel, pgdata);
 
     ik::String ee_frame = "tool0";
-
     auto q = pinocchio::randomConfiguration(model);
 
     cfg.update(q);
@@ -48,17 +56,18 @@ int main(int argc, char **argv) {
 
     v_limit->setLimitGain(0.9);
 
+    auto self_collisions = std::make_shared<ik::SelfCollisionBarrier>(cfg, 10);
+
     solver.addTask(frame_task);
     solver.addLimit(q_limit);
     solver.addLimit(v_limit);
+    solver.addBarrier(self_collisions);
 
     ik::QPSolver::Options options;
     options["printLevel"] = "none";
     solver.init(cfg, "qpoases", options);
 
     // Compute the new error
-
-    std::cout << cfg.configuration() << std::endl;
 
     solver.setDamping(1e-6);
     for (int i = 0; i < 20; ++i) {

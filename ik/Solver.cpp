@@ -11,6 +11,9 @@ void InverseKinematicsSolver::init(const Configuration &cfg,
     for (const auto &limit : limits_) {
         nc += limit->getDimension();
     }
+    for (const auto &barrier : barriers_) {
+        nc += barrier->getDimension();
+    }
 
     qp_ = std::make_unique<QPSolver>(cfg.nv(), nc, solver, opts);
 
@@ -49,6 +52,17 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
                                     lbA.middleRows(cidx, m), dt);
         cidx += m;
     }
+
+    for (const auto &barrier : barriers_) {
+        std::cout << "Barrier" <<std::endl;
+        // Determine the error and Jacobian
+        Size m = barrier->getDimension();
+        barrier->computeQPConstraints(cfg, A.middleRows(cidx, m),
+                                      ubA.middleRows(cidx, m),
+                                      lbA.middleRows(cidx, m), dt);
+        cidx += m;
+    }
+
 
     // Add damping
     H.diagonal().array() += damping_;

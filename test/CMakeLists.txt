@@ -19,5 +19,8 @@ foreach(current_file IN LISTS TEST_FILES)
     target_link_libraries("${current_name}_unit_test" ik GTest::gtest_main glog gflags)
 endforeach()
 
-# Install URDF to build folder
-configure_file("${CMAKE_SOURCE_DIR}/test/ur5.urdf" "${CMAKE_BINARY_DIR}/ur5.urdf" COPYONLY)
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "${CMAKE_SOURCE_DIR}/test/ur_description"
+            "${CMAKE_BINARY_DIR}/ur_description"
+)

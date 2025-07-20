@@ -89,7 +89,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
         pinocchio::Data::Matrix6 Jlog;
         pinocchio::Jlog6(tMf, Jlog);
         // Compute Jacobian of end-effector in local frame
-        J = -Jlog * cfg.getFrameJacobian(this->frame());
+        J = -Jlog * cfg.getFrameJacobian(cfg.model().getFrameId(this->frame()));
     }
 
     void setTargetFromConfiguration(const Configuration &cfg) {
@@ -97,7 +97,8 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
     }
 
    private:
-    String frame_;
+    std::string frame_;
+    pinocchio::FrameIndex frame_id_;
 };
 
 }  // namespace ik
