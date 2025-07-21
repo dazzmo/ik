@@ -44,18 +44,15 @@ class Configuration {
     const CollisionModel &collisionModel() const { return *collision_model_; }
     const CollisionData &collisionData() const { return *collision_data_; }
 
-    void update(const Vector &q, bool compute_jacobians = true,
-                bool compute_collisions = true) {
+    void update(const Vector &q) {
         this->q_ = q;
         pinocchio::framesForwardKinematics(*model_, *data_, q);
-        if (compute_jacobians) {
-            pinocchio::computeJointJacobians(*model_, *data_, q);
-        }
-        if (compute_collisions) {
+        pinocchio::computeJointJacobians(*model_, *data_, q);
+
+        if (collision_model_ && collision_data_) {
             pinocchio::updateGeometryPlacements(
                 *model_, *data_, *collision_model_, *collision_data_);
-            pinocchio::computeCollisions(*collision_model_, *collision_data_,
-                                         false);
+            pinocchio::computeCollisions(*collision_model_, *collision_data_);
             pinocchio::computeDistances(*collision_model_, *collision_data_);
         }
     }

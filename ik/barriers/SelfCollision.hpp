@@ -36,8 +36,6 @@ class SelfCollisionBarrier : public BarrierAbstract {
                 cfg.collisionModel().collisionPairs[k];
             const auto &dr = cfg.collisionData().distanceResults[k];
 
-            std::cout << "min d = " << dr.min_distance << std::endl;
-
             pair_distance_[k] = {k, dr.min_distance - min_distance_};
         }
 
@@ -69,9 +67,11 @@ class SelfCollisionBarrier : public BarrierAbstract {
             const auto &j1_id = go_1.parentJoint;
             const auto &j2_id = go_2.parentJoint;
 
+            // Location of each contact point in world frame
             auto w1 = dr.nearest_points[0];
             auto w2 = dr.nearest_points[1];
 
+            // Position of the contact within the joint frame
             auto r1 = w1 - cfg.data().oMi[j1_id].translation();
             auto r2 = w2 - cfg.data().oMi[j2_id].translation();
 
