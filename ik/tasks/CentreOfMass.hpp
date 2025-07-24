@@ -15,12 +15,12 @@ class CentreOfMassTask : public Task<Eigen::Vector3d> {
     CentreOfMassTask() : Task<Eigen::Vector3d>(3) {};
 
     void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override {
-        e = this->getTarget() - cfg.data().com[0];
+        e = cfg.data().com[0] - this->getTarget();
     }
 
     void computeJacobian(const Configuration &cfg,
                          Eigen::Ref<Matrix> jac) override {
-        jac = -cfg.computeCentreOfMassJacobian();
+        jac = cfg.computeCentreOfMassJacobian();
     }
 
    private:
