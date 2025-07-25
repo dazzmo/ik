@@ -61,5 +61,6 @@ class QPSolver {
     Output out_;
 
     casadi::Function qp_;
+    casadi::Function conic_f_;
 };
 }  // namespace ik
