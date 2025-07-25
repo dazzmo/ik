@@ -6,6 +6,22 @@ find_package(casadi REQUIRED)
 # Collect source files
 SET(${PROJECT_NAME}_SOURCES
 Solver.cpp
+Barrier.cpp
+Task.cpp
+Limit.cpp
+Configuration.cpp
+QPSolver.cpp
+
+tasks/AlignAxis.cpp
+tasks/CentreOfMass.cpp
+tasks/Damping.cpp
+tasks/Frame.cpp
+tasks/Posture.cpp
+
+limits/Configuration.cpp
+limits/Velocity.cpp
+
+barriers/SelfCollision.cpp
 )
 
 SET(${PROJECT_NAME}_LIBRARIES

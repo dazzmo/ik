@@ -6,7 +6,10 @@
 #include "ik/barriers/SelfCollision.hpp"
 #include "ik/limits/Configuration.hpp"
 #include "ik/limits/Velocity.hpp"
+#include "ik/tasks/CentreOfMass.hpp"
+#include "ik/tasks/Damping.hpp"
 #include "ik/tasks/Frame.hpp"
+#include "ik/tasks/Posture.hpp"
 
 int main(int argc, char **argv) {
     // Load a model
@@ -56,9 +59,13 @@ int main(int argc, char **argv) {
 
     v_limit->setLimitGain(0.9);
 
+    auto com = std::make_shared<ik::CentreOfMassTask>();
+    com->setTargetFromConfiguration(cfg);
+
     auto self_collisions = std::make_shared<ik::SelfCollisionBarrier>(cfg, 10);
 
     solver.addTask(frame_task);
+    solver.addTask(com);
     solver.addLimit(q_limit);
     solver.addLimit(v_limit);
     solver.addBarrier(self_collisions);

@@ -24,22 +24,21 @@ class BarrierAbstract {
     virtual void computeJacobian(const Configuration &cfg,
                                  Eigen::Ref<Matrix> jacobian) {}
 
+    /**
+     * @brief Sets the gain of the barrier (i.e. scales the bounds of the
+     * barrier constraints)
+     *
+     * @param gain
+     */
+    void setLimitGain(const Real &gain) { gain_ = gain; }
+    const Real &getLimitGain() const { return gain_; }
+
     void computeQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
                             Eigen::Ref<Vector> g, const Real &dt) {}
 
     void computeQPConstraints(const Configuration &cfg, Eigen::Ref<Matrix> A,
                               Eigen::Ref<Vector> ubA, Eigen::Ref<Vector> lbA,
-                              const Real &dt) {
-        Vector b = Vector::Zero(this->dimension_);
-        Matrix J = Matrix::Zero(this->dimension_, cfg.nv());
-        computeBarrier(cfg, b);
-        std::cout << "b = " << b << std::endl;
-        computeJacobian(cfg, J);
-        std::cout << "J = " << J << std::endl;
-        A = J / dt;
-        lbA = gain_ * b;
-        ubA = gain_ * b;
-    }
+                              const Real &dt);
 
    protected:
     BarrierAbstract() : dimension_(0) {}

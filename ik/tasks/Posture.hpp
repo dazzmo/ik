@@ -13,6 +13,8 @@ namespace ik {
  */
 class PostureTask : public Task<Eigen::VectorXd> {
    public:
+    using Vector = Eigen::VectorX<Real>;
+    using Matrix = Eigen::MatrixX<Real>;
     /**
      * @brief Constructor for creating a frame task.
      *
@@ -20,7 +22,7 @@ class PostureTask : public Task<Eigen::VectorXd> {
      */
     PostureTask(const Configuration &cfg) : Task<Eigen::VectorXd>(cfg.nv()) {}
 
-    void setTargetFromConfiguration() { this->setTarget(cfg.configuration()); }
+    void setTargetFromConfiguration(const Configuration &cfg);
 
     /**
      * @brief Computes the task error between the current and target posture
@@ -30,11 +32,7 @@ class PostureTask : public Task<Eigen::VectorXd> {
      * @param data The Pinocchio data structure for the robot.
      * @param e The vector to store the computed error.
      */
-    void computeError(const Configuration &cfg,
-                      Eigen::Ref<VectorX> e) override {
-        e = pinocchio::difference(cfg.model(), cfg.configuration(),
-                                  this->getTarget())
-    }
+    void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override;
 
     /**
      * @brief Computes the task Jacobian matrix.
@@ -44,9 +42,7 @@ class PostureTask : public Task<Eigen::VectorXd> {
      * @param jac The matrix to store the computed Jacobian.
      */
     void computeJacobian(const Configuration &cfg,
-                         Eigen::Ref<Matrix> jac) override {
-        jac.setIdentity();
-    }
+                         Eigen::Ref<Matrix> jac) override;
 
    protected:
 };

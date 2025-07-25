@@ -57,8 +57,8 @@ class InverseKinematicsSolver {
     std::vector<LimitPtr> limits_;
     std::vector<BarrierPtr> barriers_;
 
-    Real damping_;
     std::unique_ptr<QPSolver> qp_;
+    Real damping_;
 };
 
 }  // namespace ik

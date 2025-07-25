@@ -24,19 +24,12 @@ class Configuration {
         const std::shared_ptr<Model> &model, const std::shared_ptr<Data> &data,
         const Vector &q0,
         const std::shared_ptr<CollisionModel> &collision_model = nullptr,
-        const std::shared_ptr<CollisionData> &collision_data = nullptr)
-        : model_(model),
-          data_(data),
-          collision_model_(collision_model),
-          collision_data_(collision_data),
-          q0_(q0),
-          q_(q0) {
-        update(q_);
-        jacobian_ = Matrix6x::Zero(6, model->nv);
-    }
+        const std::shared_ptr<CollisionData> &collision_data = nullptr);
 
     Size nq() const { return model_->nq; }
     Size nv() const { return model_->nv; }
+
+    const Vector &configuration() const { return q_; }
 
     const Model &model() const { return *model_; }
     const Data &data() const { return *data_; }
@@ -44,69 +37,30 @@ class Configuration {
     const CollisionModel &collisionModel() const { return *collision_model_; }
     const CollisionData &collisionData() const { return *collision_data_; }
 
-    void update(const Vector &q) {
-        this->q_ = q;
-        pinocchio::framesForwardKinematics(*model_, *data_, q);
-        pinocchio::computeJointJacobians(*model_, *data_, q);
+    bool hasRootJoint() const { return model_->existJointName("root_joint"); }
 
-        if (collision_model_ && collision_data_) {
-            pinocchio::updateGeometryPlacements(
-                *model_, *data_, *collision_model_, *collision_data_);
-            pinocchio::computeCollisions(*collision_model_, *collision_data_);
-            pinocchio::computeDistances(*collision_model_, *collision_data_);
-        }
-    }
+    pinocchio::JointIndex getJointIndex(const String &joint) const;
+    pinocchio::FrameIndex getFrameIndex(const String &frame) const;
 
-    SE3 getTransformFrameToWorld(const String &frame) const {
-        const auto id = model_->getFrameId(frame);
-        if (id == model_->frames.size()) {
-            assert("ERROR: Frame does not exist!");
-        }
-        return data_->oMf[id];
-    }
+    void update(const Vector &q);
+
+    SE3 getTransformFrameToWorld(const String &frame) const;
 
     const Matrix6x &getJointJacobian(
         const pinocchio::JointIndex &index,
         const pinocchio::ReferenceFrame &reference_frame =
-            pinocchio::LOCAL) const {
-        if (index == model_->joints.size()) {
-            assert("ERROR: Joint does not exist!");
-        }
-        pinocchio::getJointJacobian(*model_, *data_, index, reference_frame,
-                                    jacobian_);
-        return jacobian_;
-    }
+            pinocchio::LOCAL) const;
 
     const Matrix6x &getFrameJacobian(
         const pinocchio::FrameIndex &index,
         const pinocchio::ReferenceFrame &reference_frame =
-            pinocchio::LOCAL) const {
-        if (index == model_->frames.size()) {
-            assert("ERROR: Frame does not exist!");
-        }
-        pinocchio::getFrameJacobian(*model_, *data_, index, reference_frame,
-                                    jacobian_);
-        return jacobian_;
-    }
+            pinocchio::LOCAL) const;
 
-    const Eigen::Vector3<Real> &getCentreOfMass() const {
-        return pinocchio::centerOfMass(*model_, *data_, this->q_);
-    }
+    const Eigen::Vector3<Real> &getCentreOfMass() const;
+    Matrix computeCentreOfMassJacobian() const;
 
-    Matrix computeCentreOfMassJacobian() const {
-        return pinocchio::jacobianCenterOfMass(*model_, *data_, q_);
-    }
-
-    void integrateInPlace(const Vector &v, const Real &dt) {
-        this->q_ = integrate(v, dt);
-        this->update(this->q_);
-    }
-
-    Vector integrate(const Vector &v, const Real &dt) {
-        return pinocchio::integrate(*model_, q_, v * dt);
-    }
-
-    const Vector &configuration() const { return q_; }
+    void integrateInPlace(const Vector &v, const Real &dt);
+    Vector integrate(const Vector &v, const Real &dt);
 
    private:
     std::shared_ptr<Model> model_;

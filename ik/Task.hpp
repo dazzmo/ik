@@ -20,6 +20,10 @@ class TaskAbstract {
 
     Size getDimension() const { return dimension_; }
     const Vector &getWeighting() const { return weighting_; }
+    void setWeighting(const Vector &weighting) { weighting_ = weighting; }
+    void setWeighting(const Real &weighting) {
+        weighting_.setConstant(weighting);
+    }
 
     void setLevenbergMarquardtDamping(const Real &value) {
         lm_damping_ = value;
@@ -31,45 +35,35 @@ class TaskAbstract {
     virtual void computeJacobian(const Configuration &cfg,
                                  Eigen::Ref<Matrix> jac) = 0;
 
-    Vector computeError(const Configuration &cfg) {
-        Vector e = Vector::Zero(this->getDimension());
-        computeError(cfg, e);
-        return e;
-    }
+    Vector computeError(const Configuration &cfg);
 
-    Matrix computeJacobian(const Configuration &cfg) {
-        Matrix J = Matrix::Zero(this->getDimension(), cfg.nv());
-        computeJacobian(cfg, J);
-        return J;
-    }
+    Matrix computeJacobian(const Configuration &cfg);
 
+    /**
+     * @brief Adds to an existing quadratic objective of the form \frac{1}{2}
+     * x^T H x + g^T x
+     *
+     * @param cfg
+     * @param H
+     * @param g
+     */
     void addToQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
-                          Eigen::Ref<Vector> g) {
-        Matrix W = this->getWeighting().asDiagonal();
-        Matrix J = computeJacobian(cfg);
-        Vector e = computeError(cfg);
-        Vector We = W * e;
-
-        H += J.transpose() * W * J;
-        H.diagonal().array() += getLevenbergMarquardtDamping() * We.dot(We);
-        g += J.transpose() * W * e;
-    }
+                          Eigen::Ref<Vector> g);
 
     void computeQPObjective(const Configuration &cfg, Eigen::Ref<Matrix> H,
-                            Eigen::Ref<Vector> g) {
-        addToQPObjective(cfg, H, g);
-    }
+                            Eigen::Ref<Vector> g);
 
    protected:
     TaskAbstract() : dimension_(0), weighting_(Vector::Zero(0)) {}
     TaskAbstract(const Size &dimension)
         : dimension_(dimension), weighting_(Vector::Ones(dimension)) {}
 
-    /// @brief The weighting vector
-    Vector weighting_;
+    Vector &getWeighting() { return weighting_; }
 
    private:
     Size dimension_;
+    /// @brief The weighting vector
+    Vector weighting_;
     Real lm_damping_;
 };
 

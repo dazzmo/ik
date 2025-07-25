@@ -12,25 +12,13 @@ class VelocityLimit : public LimitAbstract {
 
    public:
     VelocityLimit(const Configuration &cfg, const Matrix &projection,
-                  const Vector &ub, const Vector &lb)
-        : LimitAbstract(projection.rows()),
-          gain_(1.0),
-          projection_(projection),
-          ub_(ub),
-          lb_(lb) {}
-
-    void setLimitGain(const Real &value) { gain_ = value; }
+                  const Vector &ub, const Vector &lb);
 
     void computeQPConstraints(const Configuration &cfg, Eigen::Ref<Matrix> A,
                               Eigen::Ref<Vector> ubA, Eigen::Ref<Vector> lbA,
-                              const Real &dt) override {
-        A = projection_;
-        ubA = dt * gain_ * ub_;
-        lbA = dt * gain_ * lb_;
-    }
+                              const Real &dt) override;
 
    private:
-    Real gain_;
     Matrix projection_;
     Vector ub_;
     Vector lb_;

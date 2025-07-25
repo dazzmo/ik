@@ -28,15 +28,11 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      *
      * @param cost
      */
-    void setPositionCost(const Eigen::Vector3<Real> &cost) {
-        this->weighting_.topRows(3) = cost;
-    }
+    void setPositionCost(const Eigen::Vector3<Real> &cost);
     /**
      * @copydoc FrameTask::setPositionCost(const Eigen::Vector3<Real> &)
      */
-    void setPositionCost(const Real &cost) {
-        this->weighting_.topRows(3).setConstant(cost);
-    }
+    void setPositionCost(const Real &cost);
 
     /**
      * @brief Set the cost of the rotation error
@@ -44,12 +40,8 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      *
      * @param cost
      */
-    void setOrientationCost(const Eigen::Vector3<Real> &cost) {
-        this->weighting_.bottomRows(3) = cost;
-    }
-    void setOrientationCost(const Real &cost) {
-        this->weighting_.bottomRows(3).setConstant(cost);
-    }
+    void setOrientationCost(const Eigen::Vector3<Real> &cost);
+    void setOrientationCost(const Real &cost);
 
     /**
      * @brief Computes the error of the frame with respect to the target as an
@@ -58,16 +50,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      * @param cfg
      * @param e
      */
-    void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override {
-        const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
-        // Target to World
-        auto oMt = this->getTarget();
-        // Target to Frame
-        auto fMt = oMf.actInv(oMt);
-        // Compute error between target frame and the current frame of the
-        // system
-        e = pinocchio::log6(fMt).toVector();
-    }
+    void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override;
 
     /**
      * @brief Computes the error of the frame with respect to the target as an
@@ -77,28 +60,12 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      * @param e
      */
     void computeJacobian(const Configuration &cfg,
-                         Eigen::Ref<Matrix> J) override {
-        // Frame to World
-        const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
-        // Target to World
-        auto oMt = this->getTarget();
-        // Frame to Target
-        auto tMf = oMt.actInv(oMf);
+                         Eigen::Ref<Matrix> J) override;
 
-        // Construct jacobian of the logarithm map
-        pinocchio::Data::Matrix6 Jlog;
-        pinocchio::Jlog6(tMf, Jlog);
-        // Compute Jacobian of end-effector in local frame
-        J = -Jlog * cfg.getFrameJacobian(cfg.model().getFrameId(this->frame()));
-    }
-
-    void setTargetFromConfiguration(const Configuration &cfg) {
-        this->setTarget(cfg.getTransformFrameToWorld(this->frame()));
-    }
+    void setTargetFromConfiguration(const Configuration &cfg);
 
    private:
     std::string frame_;
-    pinocchio::FrameIndex frame_id_;
 };
 
 }  // namespace ik
