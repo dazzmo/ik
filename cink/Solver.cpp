@@ -17,6 +17,9 @@ void InverseKinematicsSolver::init(const Configuration &cfg,
 
     qp_ = std::make_unique<QPSolver>(cfg.nv(), nc, solver, opts);
 
+    // Create data
+    data_ = std::make_unique<Data>(cfg.nv(), nc);
+
     is_init_ = true;
 }
 
@@ -26,50 +29,41 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
         assert("Solver has not been initialised!");
     }
 
+    data_->reset();
     // Construct inverse kinematics
-    Eigen::MatrixXd H = Eigen::MatrixXd::Zero(qp_->nx(), qp_->nx());
-    Eigen::VectorXd g = Eigen::VectorXd::Zero(qp_->nx());
-
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(qp_->nc(), qp_->nx());
-
-    Eigen::VectorXd ubA = Eigen::VectorXd::Zero(qp_->nc());
-    Eigen::VectorXd lbA = Eigen::VectorXd::Zero(qp_->nc());
-
-    Eigen::VectorXd ubx = cfg.model().velocityLimit;
-    Eigen::VectorXd lbx = -cfg.model().velocityLimit;
 
     for (const auto &task : tasks_) {
         // Determine the error and Jacobian
-        task->addToQPObjective(cfg, H, g);
+        task->addToQPObjective(cfg, data_->H, data_->g);
     }
 
     Size cidx = 0;
     for (const auto &limit : limits_) {
         // Determine the error and Jacobian
         Size m = limit->getDimension();
-        limit->computeQPConstraints(cfg, A.middleRows(cidx, m),
-                                    ubA.middleRows(cidx, m),
-                                    lbA.middleRows(cidx, m), dt);
+        limit->computeQPConstraints(cfg, data_->A.middleRows(cidx, m),
+                                    data_->ubA.middleRows(cidx, m),
+                                    data_->lbA.middleRows(cidx, m), dt);
         cidx += m;
     }
 
     for (const auto &barrier : barriers_) {
         // Determine the error and Jacobian
         Size m = barrier->getDimension();
-        barrier->computeQPConstraints(cfg, A.middleRows(cidx, m),
-                                      ubA.middleRows(cidx, m),
-                                      lbA.middleRows(cidx, m), dt);
+        barrier->computeQPConstraints(cfg, data_->A.middleRows(cidx, m),
+                                      data_->ubA.middleRows(cidx, m),
+                                      data_->lbA.middleRows(cidx, m), dt);
         cidx += m;
     }
 
-
     // Add damping
-    H.diagonal().array() += damping_;
+    data_->H.diagonal().array() += damping_;
 
     // Solve
-    qp_->solve(H, g, A, ubA, lbA, ubx, lbx);
+    qp_->solve(data_->H, data_->g, data_->A, data_->ubA, data_->lbA,
+               cfg.model().velocityLimit, -cfg.model().velocityLimit);
     // Return the change in velocity needed
     return qp_->getPrimalSolution();
 };
 
-}  // namespace ik
+}  // namespace cink

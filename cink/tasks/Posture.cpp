@@ -7,8 +7,14 @@ void PostureTask::setTargetFromConfiguration(const Configuration &cfg) {
 }
 
 void PostureTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
-    e = pinocchio::difference(cfg.model(), cfg.configuration(),
-                              this->getTarget());
+    if (cfg.hasRootJoint()) {
+        e = pinocchio::difference(cfg.model(), cfg.configuration(),
+                                  this->getTarget())
+                .bottomRows(cfg.nv() - 6);
+    } else {
+        e = pinocchio::difference(cfg.model(), cfg.configuration(),
+                                  this->getTarget());
+    }
 }
 
 void PostureTask::computeJacobian(const Configuration &cfg,
@@ -16,4 +22,4 @@ void PostureTask::computeJacobian(const Configuration &cfg,
     jac.setIdentity();
 }
 
-}  // namespace ik
+}  // namespace cink

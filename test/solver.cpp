@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     solver.addTask(com);
     solver.addLimit(q_limit);
     solver.addLimit(v_limit);
-    solver.addBarrier(self_collisions);
+    // solver.addBarrier(self_collisions);
 
     cink::QPSolver::Options options;
     options["printLevel"] = "none";
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     // Compute the new error
 
     solver.setDamping(1e-6);
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 20; ++i) {
         auto dv = solver.solve(cfg, 0.1);
         cfg.integrateInPlace(dv, 0.1);
     }

@@ -29,9 +29,6 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
      * @param cost
      */
     void setPositionCost(const Eigen::Vector3<Real> &cost);
-    /**
-     * @copydoc FrameTask::setPositionCost(const Eigen::Vector3<Real> &)
-     */
     void setPositionCost(const Real &cost);
 
     /**

@@ -22,7 +22,7 @@ class DampingTask : public Task<Eigen::VectorXd> {
     /**
      * @brief Computes the task error between the current and target posture
      * configurations.
-     *
+     * @param cfg The configuration of the robot
      * @param e The vector to store the computed error.
      */
     void computeError(const Configuration &cfg, Eigen::Ref<Vector> e);
@@ -30,6 +30,7 @@ class DampingTask : public Task<Eigen::VectorXd> {
     /**
      * @brief Computes the task Jacobian matrix.
      *
+     * @param cfg The configuration of the robot
      * @param jac The matrix to store the computed Jacobian.
      */
     void computeJacobian(const Configuration &cfg, Eigen::Ref<Matrix> jac);

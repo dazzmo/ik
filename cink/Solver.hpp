@@ -11,6 +11,7 @@ namespace cink {
 
 class InverseKinematicsSolver {
    public:
+    using Matrix = Eigen::MatrixX<Real>;
     using Vector = Eigen::VectorX<Real>;
 
     using TaskPtr = std::shared_ptr<TaskAbstract>;
@@ -57,8 +58,31 @@ class InverseKinematicsSolver {
     std::vector<LimitPtr> limits_;
     std::vector<BarrierPtr> barriers_;
 
+    struct Data {
+        Data(const Size &nx, const Size &nc)
+            : H(Matrix::Zero(nx, nx)),
+              g(Vector::Zero(nx)),
+              A(Matrix::Zero(nc, nx)),
+              lbA(Vector::Zero(nc)),
+              ubA(Vector::Zero(nc)) {}
+        Matrix H;
+        Vector g;
+        Matrix A;
+        Vector lbA;
+        Vector ubA;
+
+        void reset() {
+            H.setZero();
+            g.setZero();
+            A.setZero();
+            lbA.setZero();
+            ubA.setZero();
+        }
+    };
+
     std::unique_ptr<QPSolver> qp_;
     Real damping_;
+    std::unique_ptr<Data> data_{nullptr};
 };
 
-}  // namespace ik
+}  // namespace cink

@@ -20,7 +20,8 @@ class PostureTask : public Task<Eigen::VectorXd> {
      *
      * @param model The Pinocchio model of the robot.
      */
-    PostureTask(const Configuration &cfg) : Task<Eigen::VectorXd>(cfg.nv()) {}
+    PostureTask(const Configuration &cfg)
+        : Task<Eigen::VectorXd>(cfg.hasRootJoint() ? cfg.nv() - 6 : cfg.nv()) {}
 
     void setTargetFromConfiguration(const Configuration &cfg);
 
@@ -28,8 +29,7 @@ class PostureTask : public Task<Eigen::VectorXd> {
      * @brief Computes the task error between the current and target posture
      * configurations.
      *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
+     * @param cfg Configuration of the robot
      * @param e The vector to store the computed error.
      */
     void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override;
@@ -37,8 +37,7 @@ class PostureTask : public Task<Eigen::VectorXd> {
     /**
      * @brief Computes the task Jacobian matrix.
      *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
+     * @param cfg Configuration of the robot
      * @param jac The matrix to store the computed Jacobian.
      */
     void computeJacobian(const Configuration &cfg,
@@ -47,4 +46,4 @@ class PostureTask : public Task<Eigen::VectorXd> {
    protected:
 };
 
-}  // namespace ik
+}  // namespace cink

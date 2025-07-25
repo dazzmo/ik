@@ -24,10 +24,10 @@ TaskAbstract::Matrix TaskAbstract::computeJacobian(const Configuration &cfg) {
 void TaskAbstract::addToQPObjective(const Configuration &cfg,
                                     Eigen::Ref<Matrix> H,
                                     Eigen::Ref<Vector> g) {
-    Matrix W = this->getWeighting().asDiagonal();
-    Matrix J = computeJacobian(cfg);
-    Vector e = computeError(cfg);
-    Vector We = W * e;
+    const Matrix W = this->getWeighting().asDiagonal();
+    const Matrix J = computeJacobian(cfg);
+    const Vector e = computeError(cfg);
+    const Vector We = W * e;
 
     H += J.transpose() * W * J;
     H.diagonal().array() += getLevenbergMarquardtDamping() * We.dot(We);
@@ -40,4 +40,4 @@ void TaskAbstract::computeQPObjective(const Configuration &cfg,
     addToQPObjective(cfg, H, g);
 }
 
-}  // namespace ik
+}  // namespace cink
