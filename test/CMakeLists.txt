@@ -16,7 +16,7 @@ include(GoogleTest)
 foreach(current_file IN LISTS TEST_FILES)
     get_filename_component(current_name ${current_file} NAME_WE)
     add_executable("${current_name}_unit_test" ${current_file})
-    target_link_libraries("${current_name}_unit_test" ik GTest::gtest_main glog gflags)
+    target_link_libraries("${current_name}_unit_test" cink GTest::gtest_main glog gflags)
 endforeach()
 
 execute_process(

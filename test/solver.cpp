@@ -1,15 +1,15 @@
 
-#include "ik/Solver.hpp"
+#include "cink/Solver.hpp"
 
 #include <pinocchio/parsers/urdf.hpp>
 
-#include "ik/barriers/SelfCollision.hpp"
-#include "ik/limits/Configuration.hpp"
-#include "ik/limits/Velocity.hpp"
-#include "ik/tasks/CentreOfMass.hpp"
-#include "ik/tasks/Damping.hpp"
-#include "ik/tasks/Frame.hpp"
-#include "ik/tasks/Posture.hpp"
+#include "cink/barriers/SelfCollision.hpp"
+#include "cink/limits/Configuration.hpp"
+#include "cink/limits/Velocity.hpp"
+#include "cink/tasks/CentreOfMass.hpp"
+#include "cink/tasks/Damping.hpp"
+#include "cink/tasks/Frame.hpp"
+#include "cink/tasks/Posture.hpp"
 
 int main(int argc, char **argv) {
     // Load a model
@@ -29,19 +29,19 @@ int main(int argc, char **argv) {
     auto pgdata = std::make_shared<pinocchio::GeometryData>(*pgmodel);
 
     // Create configuration
-    auto cfg = ik::Configuration(pmodel, pdata, Eigen::VectorXd::Zero(model.nq),
-                                 pgmodel, pgdata);
+    auto cfg = cink::Configuration(
+        pmodel, pdata, Eigen::VectorXd::Zero(model.nq), pgmodel, pgdata);
 
-    ik::String ee_frame = "tool0";
+    cink::String ee_frame = "tool0";
     auto q = pinocchio::randomConfiguration(model);
 
     cfg.update(q);
 
     // Create a solver
-    auto solver = ik::InverseKinematicsSolver();
+    auto solver = cink::InverseKinematicsSolver();
 
     // Create a random task
-    auto frame_task = std::make_shared<ik::FrameTask>(ee_frame);
+    auto frame_task = std::make_shared<cink::FrameTask>(ee_frame);
 
     frame_task->setTargetFromConfiguration(cfg);
     pinocchio::SE3 T = frame_task->getTarget();
@@ -50,19 +50,20 @@ int main(int argc, char **argv) {
     frame_task->setOrientationCost(1e-1);
     frame_task->setLevenbergMarquardtDamping(1e-1);
 
-    auto q_limit = std::make_shared<ik::ConfigurationLimit>(
+    auto q_limit = std::make_shared<cink::ConfigurationLimit>(
         cfg, Eigen::MatrixXd::Identity(model.nv, model.nv));
 
-    auto v_limit = std::make_shared<ik::VelocityLimit>(
+    auto v_limit = std::make_shared<cink::VelocityLimit>(
         cfg, Eigen::MatrixXd::Identity(model.nv, model.nv), model.velocityLimit,
         -model.velocityLimit);
 
     v_limit->setLimitGain(0.9);
 
-    auto com = std::make_shared<ik::CentreOfMassTask>();
+    auto com = std::make_shared<cink::CentreOfMassTask>();
     com->setTargetFromConfiguration(cfg);
 
-    auto self_collisions = std::make_shared<ik::SelfCollisionBarrier>(cfg, 10);
+    auto self_collisions =
+        std::make_shared<cink::SelfCollisionBarrier>(cfg, 10);
 
     solver.addTask(frame_task);
     solver.addTask(com);
@@ -70,14 +71,14 @@ int main(int argc, char **argv) {
     solver.addLimit(v_limit);
     solver.addBarrier(self_collisions);
 
-    ik::QPSolver::Options options;
+    cink::QPSolver::Options options;
     options["printLevel"] = "none";
     solver.init(cfg, "qpoases", options);
 
     // Compute the new error
 
     solver.setDamping(1e-6);
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 1; ++i) {
         auto dv = solver.solve(cfg, 0.1);
         cfg.integrateInPlace(dv, 0.1);
     }
