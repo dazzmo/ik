@@ -26,7 +26,7 @@ barriers/SelfCollision.cpp
 
 SET(${PROJECT_NAME}_LIBRARIES
 Eigen3::Eigen
-casadi
+casadi::casadi
 pinocchio::pinocchio
 )
 
