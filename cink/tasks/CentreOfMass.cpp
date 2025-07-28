@@ -8,7 +8,7 @@ void CentreOfMassTask::setTargetFromConfiguration(const Configuration &cfg) {
 
 void CentreOfMassTask::computeError(const Configuration &cfg,
                                     Eigen::Ref<Vector> e) {
-    e = cfg.data().com[0] - this->getTarget();
+    e =  cfg.data().com[0] - this->getTarget();
 }
 
 void CentreOfMassTask::computeJacobian(const Configuration &cfg,

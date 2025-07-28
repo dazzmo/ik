@@ -8,12 +8,12 @@ void PostureTask::setTargetFromConfiguration(const Configuration &cfg) {
 
 void PostureTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
     if (cfg.hasRootJoint()) {
-        e = pinocchio::difference(cfg.model(), cfg.configuration(),
-                                  this->getTarget())
+        e = pinocchio::difference(cfg.model(), this->getTarget(),
+                                  cfg.configuration())
                 .bottomRows(cfg.nv() - 6);
     } else {
-        e = pinocchio::difference(cfg.model(), cfg.configuration(),
-                                  this->getTarget());
+        e = pinocchio::difference(cfg.model(), this->getTarget(),
+                                  cfg.configuration());
     }
 }
 
