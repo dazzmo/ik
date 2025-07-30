@@ -63,7 +63,7 @@ vector_t pik(InverseKinematicsProblem &problem, const vector_t &q0,
         // Compute direction
         data.dq = data.dq + data.P * data.da;
 
-        if (visitor.should_stop(problem, data.e, data.dq)) {
+        if (visitor.should_stop(problem, data)) {
             data.success = true;
             return data.q;
         }

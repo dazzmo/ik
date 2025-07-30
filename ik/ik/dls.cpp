@@ -58,8 +58,9 @@ vector_t dls(InverseKinematicsProblem &problem, const vector_t &q0,
         VLOG(10) << "dls: dq = " << data.dq.transpose();
         VLOG(15) << "dls: J = " << data.Jt;
 
-        if (visitor.should_stop(problem, data.e, data.dq)) {
+        if (visitor.should_stop(problem, data)) {
             data.success = true;
+            std::cout << "Stopping: " << data.q.transpose() << std::endl;
             return data.q;
         }
 

@@ -13,10 +13,9 @@ class inverse_kinematics_visitor {
     virtual bool update_jacobian() const { return true; }
 
     virtual bool should_stop(const InverseKinematicsProblem& ik,
-                             const std::vector<vector_t>& e,
-                             const vector_t& dq) const {
+                             problem_data& data) const {
         // Assess priority 0 tolerances
-        if (e[0].squaredNorm() < 1e-4) return true;
+        if (data.e[0].squaredNorm() < 1e-4) return true;
         return false;
     }
 };
