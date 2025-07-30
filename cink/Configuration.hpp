@@ -20,11 +20,10 @@ class Configuration {
     using CollisionModel = pinocchio::GeometryModel;
     using CollisionData = pinocchio::GeometryData;
 
-    Configuration(
-        const std::shared_ptr<Model> &model, const std::shared_ptr<Data> &data,
-        const Vector &q0,
-        const std::shared_ptr<CollisionModel> &collision_model = nullptr,
-        const std::shared_ptr<CollisionData> &collision_data = nullptr);
+    Configuration(const Model &model, const Vector &q0);
+
+    Configuration(const Model &model, const Vector &q0,
+                  const CollisionModel &collision_model);
 
     Size nq() const { return model_->nq; }
     Size nv() const { return model_->nv; }
@@ -63,11 +62,11 @@ class Configuration {
     Vector integrate(const Vector &v, const Real &dt);
 
    private:
-    std::shared_ptr<Model> model_;
-    std::shared_ptr<Data> data_;
+    const Model *model_;
+    std::unique_ptr<Data> data_;
 
-    std::shared_ptr<CollisionModel> collision_model_;
-    std::shared_ptr<CollisionData> collision_data_;
+    const CollisionModel *collision_model_;
+    std::unique_ptr<CollisionData> collision_data_;
 
     Vector q0_;
     Vector q_;
@@ -75,4 +74,4 @@ class Configuration {
     Matrix6x jacobian_;
 };
 
-}  // namespace ik
+}  // namespace cink

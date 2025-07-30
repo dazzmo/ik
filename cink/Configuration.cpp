@@ -2,18 +2,27 @@
 
 namespace cink {
 
-Configuration::Configuration(
-    const std::shared_ptr<Model> &model, const std::shared_ptr<Data> &data,
-    const Vector &q0, const std::shared_ptr<CollisionModel> &collision_model,
-    const std::shared_ptr<CollisionData> &collision_data)
-    : model_(model),
-      data_(data),
-      collision_model_(collision_model),
-      collision_data_(collision_data),
+Configuration::Configuration(const Model &model, const Vector &q0)
+    : model_(&model),
+      data_(std::make_unique<Data>(model)),
+      collision_model_(nullptr),
+      collision_data_(nullptr),
       q0_(q0),
       q_(q0) {
     update(q_);
-    jacobian_ = Matrix6x::Zero(6, model->nv);
+    jacobian_ = Matrix6x::Zero(6, model.nv);
+}
+
+Configuration::Configuration(const Model &model, const Vector &q0,
+                             const CollisionModel &collision_model)
+    : model_(&model),
+      data_(std::make_unique<Data>(model)),
+      collision_model_(&collision_model),
+      collision_data_(std::make_unique<CollisionData>(collision_model)),
+      q0_(q0),
+      q_(q0) {
+    update(q_);
+    jacobian_ = Matrix6x::Zero(6, model.nv);
 }
 
 pinocchio::JointIndex Configuration::getJointIndex(const String &joint) const {
@@ -94,4 +103,4 @@ Configuration::Vector Configuration::integrate(const Vector &v,
     return pinocchio::integrate(*model_, q_, v * dt);
 }
 
-}  // namespace ik
+}  // namespace cink
