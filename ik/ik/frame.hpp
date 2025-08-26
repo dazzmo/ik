@@ -137,7 +137,6 @@ class FrameTask : public Task {
      */
     void compute_error(const model_t &model, data_t &data,
                        const vector_const_ref_t q, vector_ref_t e) override {
-        std::cout << "FRAME TASK EVALUATION" << std::endl;
         // Compute the frame error
         compute_frame_error(model, data, e, frame, target, reference_frame,
                             type);
