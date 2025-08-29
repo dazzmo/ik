@@ -1,3 +1,4 @@
+#pragma once
 #include "cink/Limit.hpp"
 
 namespace cink {
@@ -12,7 +13,7 @@ class ConfigurationLimit : public LimitAbstract {
     using Vector = typename LimitAbstract::Vector;
 
    public:
-    ConfigurationLimit(const Configuration &cfg, const Matrix &projection);
+    ConfigurationLimit(const Configuration &cfg);
 
 
     void computeQPConstraints(const Configuration &cfg, Eigen::Ref<Matrix> A,
@@ -20,6 +21,8 @@ class ConfigurationLimit : public LimitAbstract {
                               const Real &dt) override;
    private:
     Matrix projection_;
+    /// @brief Indices of the velocity vector that have configuration limits
+    std::vector<Eigen::Index> indices_;
 };
 
 }  // namespace ik

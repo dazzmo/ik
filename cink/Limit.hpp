@@ -37,9 +37,11 @@ class LimitAbstract {
     LimitAbstract() : dimension_(0), gain_(1.0) {}
     LimitAbstract(const Size &dimension) : dimension_(dimension), gain_(1.0) {}
 
+    void setDimension(const Size &dimension) { dimension_ = dimension; }
+
    private:
     Size dimension_;
     Real gain_;
 };
 
-}  // namespace ik
+}  // namespace cink

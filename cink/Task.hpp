@@ -35,6 +35,11 @@ class TaskAbstract {
     virtual void computeJacobian(const Configuration &cfg,
                                  Eigen::Ref<Matrix> jac) = 0;
 
+    void computeWeightedError(const Configuration &cfg, Eigen::Ref<Vector> e) {
+        this->computeError(cfg, e);
+        e = getWeighting().cwiseProduct(e);
+    }
+
     Vector computeError(const Configuration &cfg);
 
     Matrix computeJacobian(const Configuration &cfg);
@@ -54,9 +59,12 @@ class TaskAbstract {
                             Eigen::Ref<Vector> g);
 
    protected:
-    TaskAbstract() : dimension_(0), weighting_(Vector::Zero(0)) {}
+    TaskAbstract()
+        : dimension_(0), weighting_(Vector::Zero(0)), lm_damping_(0.0) {}
     TaskAbstract(const Size &dimension)
-        : dimension_(dimension), weighting_(Vector::Ones(dimension)) {}
+        : dimension_(dimension),
+          weighting_(Vector::Ones(dimension)),
+          lm_damping_(0.0) {}
 
     Vector &getWeighting() { return weighting_; }
 
@@ -83,4 +91,4 @@ class Task : public TaskAbstract {
     TargetType target_;
 };
 
-}  // namespace ik
+}  // namespace cink

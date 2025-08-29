@@ -1,5 +1,7 @@
 #include "cink/tasks/Posture.hpp"
 
+#include <iostream>
+
 namespace cink {
 
 void PostureTask::setTargetFromConfiguration(const Configuration &cfg) {
@@ -9,12 +11,13 @@ void PostureTask::setTargetFromConfiguration(const Configuration &cfg) {
 void PostureTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
     if (cfg.hasRootJoint()) {
         e = pinocchio::difference(cfg.model(), this->getTarget(),
-                                  cfg.configuration())
-                .bottomRows(cfg.nv() - 6);
+        cfg.configuration())
+        .bottomRows(cfg.nv() - 6);
     } else {
         e = pinocchio::difference(cfg.model(), this->getTarget(),
-                                  cfg.configuration());
+        cfg.configuration());
     }
+
 }
 
 void PostureTask::computeJacobian(const Configuration &cfg,

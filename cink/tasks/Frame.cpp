@@ -28,7 +28,6 @@ void FrameTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
     // Compute error between target frame and the current frame of the
     // system
     e = pinocchio::log6(fMt).toVector();
-    std::cout << "e = " << e.transpose() << std::endl;
 }
 
 void FrameTask::computeJacobian(const Configuration &cfg,

@@ -28,6 +28,7 @@ class Configuration {
     Size nq() const { return model_->nq; }
     Size nv() const { return model_->nv; }
 
+    const Vector &q0() const { return q0_; }
     const Vector &configuration() const { return q_; }
 
     const Model &model() const { return *model_; }
