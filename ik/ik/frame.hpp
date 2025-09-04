@@ -205,23 +205,31 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
  * @brief Task designed to align a particular axis of an end-effector frame to,
  * irrespective of the other axes of the frame. Appropriate for contact tasks
  * where having the end-effector aligned with the contact normal is essential.
+     * Now includes soft alignment (Huber-style loss) for reduced stiffness.
  *
  */
-class AlignAxisTask : public Task {
+    class AlignAxisTask : public Task
+    {
    public:
     /**
      * @brief Constructor for creating a frame task.
      *
      * @param model The Pinocchio model of the robot.
      * @param frame The name of the frame for which the task is defined.
-     * @param type The type of task (default: `KinematicType::Full`).
+         * @param axis The axis to align.
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
+         * @param tolerance Threshold for quadratic-to-linear transition in degrees (default: 0.1).
+         * @param use_soft_alignment Enable soft alignment behavior (default: false for backward compatibility).
      */
     AlignAxisTask(const model_t &model, const std::string &frame,
                   const AlignAxisType &axis,
-                  const std::string &reference_frame = "universe")
-        : Task(), axis_(axis), frame(frame), reference_frame(reference_frame) {
+                      const std::string &reference_frame = "universe",
+                      double tolerance = 0.1,
+                      bool use_soft_alignment = false)
+            : Task(), axis_(axis), frame(frame), reference_frame(reference_frame), use_soft_alignment_(use_soft_alignment)
+        {
+            this->set_tolerance_degrees(tolerance);
         // Set dimension
         this->set_dimension(index_t(1));
         // Initialise frame jacobian matrix
@@ -230,70 +238,133 @@ class AlignAxisTask : public Task {
 
     /**
      * @brief Factory method to create a shared pointer to a frame task.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param frame The name of the frame for which the task is defined.
-     * @param type The type of task (default: `KinematicType::Full`).
-     * @param reference_frame The name of the reference frame for the task
-     * (default: "universe").
-     * @return A shared pointer to the created `FrameTask` instance.
      */
     static std::shared_ptr<AlignAxisTask> create(
         const model_t &model, const std::string &frame,
         const AlignAxisType &axis,
-        const std::string &reference_frame = "universe") {
+            const std::string &reference_frame = "universe")
+        {
         return std::make_shared<AlignAxisTask>(model, frame, axis,
                                                reference_frame);
     }
 
     /**
-     * @brief Computes the tasj error between the current and target frame
+         * @brief Factory method to create a shared pointer to a soft alignment task.
+         */
+        static std::shared_ptr<AlignAxisTask> create_soft(
+            const model_t &model, const std::string &frame,
+            const AlignAxisType &axis,
+            const std::string &reference_frame = "universe",
+            double tolerance_degrees = 5.0)
+        {
+            return std::make_shared<AlignAxisTask>(model, frame, axis,
+                                                   reference_frame, tolerance_degrees, true);
+        }
+
+        /**
+         * @brief Set soft alignment tolerance in degrees
+         *
+         * @param degrees Misalignment angle in degrees at which the error transitions
+         *        from quadratic to linear behavior
+         */
+        void set_tolerance_degrees(double degrees)
+        {
+            double radians = degrees * M_PI / 180.0;
+            tolerance_ = 1.0 - std::cos(radians);
+        }
+
+        /**
+         * @brief Get current tolerance as degrees
+         *
+         * @return Misalignment angle in degrees
+         */
+        double get_tolerance_degrees() const
+        {
+            return std::acos(1.0 - tolerance_) * 180.0 / M_PI;
+        }
+
+        /**
+         * @brief Enable/disable soft alignment behavior
+         *
+         * @param enable True to enable soft alignment, false for original behavior
+         * @param tolerance Threshold for quadratic-to-linear transition
+         */
+        void set_soft_alignment(bool enable, double tolerance = 0.1)
+        {
+            use_soft_alignment_ = enable;
+            tolerance_ = tolerance;
+        }
+
+        /**
+         * @brief Computes the task error between the current and target frame
      * configurations.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
-     * @param e The vector to store the computed error.
      */
     void compute_error(const model_t &model, data_t &data,
-                       const vector_const_ref_t q, vector_ref_t e) override {
+                           const vector_const_ref_t q, vector_ref_t e) override
+        {
         // Compute the frame error
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-        // Reference Frame to World
-        const auto &oMr =
-            get_transform_frame_to_world(model, data, reference_frame);
-        // Frame to Reference Frame
+            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
-        // Get axis of frame with respect to the reference frame
+
         Eigen::Ref<const vector3_t> r =
             rMf.rotation().col(static_cast<Eigen::Index>(axis_));
 
-        // Compute alignment error
-        e << 1.0 - r.dot(target.normalized());
+            double raw_error = 1.0 - r.dot(target.normalized());
+
+            if (use_soft_alignment_)
+            {
+                // Huber-like shaping
+                if (raw_error <= tolerance_)
+                {
+                    e << 0.5 * raw_error * raw_error / tolerance_; // quadratic region
+                }
+                else
+                {
+                    e << raw_error - 0.5 * tolerance_; // linear region
+                }
+            }
+            else
+            {
+                // Original behavior
+                e << raw_error;
+            }
     }
 
     /**
      * @brief Computes the task Jacobian matrix.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
-     * @param jac The matrix to store the computed Jacobian.
      */
     void compute_jacobian(const model_t &model, data_t &data,
-                          matrix_ref_t jac) override {
-        // Compute the frame error
+                              matrix_ref_t jac) override
+        {
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-        // Reference Frame to World
-        const auto &oMr =
-            get_transform_frame_to_world(model, data, reference_frame);
-        // Frame to Reference Frame
+            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
 
-        // Compute Jacobian of end-effector in local frame
         pinocchio::getFrameJacobian(model, data, model.getFrameId(frame),
                                     pinocchio::LOCAL, frame_jacobian_);
 
-        // Create task Jacobian
-        jac = -(rMf.rotation()
+            Eigen::Ref<const vector3_t> r =
+                rMf.rotation().col(static_cast<Eigen::Index>(axis_));
+            double raw_error = 1.0 - r.dot(target.normalized());
+
+            // Default scaling
+            double scale_factor = 1.0;
+
+            if (use_soft_alignment_)
+            {
+                if (raw_error <= tolerance_)
+                {
+                    scale_factor = raw_error / tolerance_; // derivative of quadratic region
+                }
+                else
+                {
+                    scale_factor = 1.0; // derivative of linear region
+                }
+            }
+
+            jac = -scale_factor *
+                  (rMf.rotation()
                     .col(static_cast<Eigen::Index>(axis_))
                     .cross(target.normalized()))
                    .transpose() *
@@ -316,6 +387,10 @@ class AlignAxisTask : public Task {
     string_t reference_frame;
     // Matrix to compute the frame jacobians of the task
     data_t::Matrix6x frame_jacobian_;
+
+        // Soft alignment parameters
+        double tolerance_;        // Quadratic-to-linear transition
+        bool use_soft_alignment_; // Enable soft alignment behavior
 };
 
 /**
