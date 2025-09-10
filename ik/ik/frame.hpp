@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cmath> // cos, M_PI
 #include <pinocchio/algorithm/frames.hpp>
 
 #include "ik/constraint.hpp"
@@ -225,11 +225,11 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
     AlignAxisTask(const model_t &model, const std::string &frame,
                   const AlignAxisType &axis,
                       const std::string &reference_frame = "universe",
-                      double tolerance = 0.1,
+                      double deadband_deg = 10.0, double huber_deg = 10.0,
                       bool use_soft_alignment = false)
             : Task(), axis_(axis), frame(frame), reference_frame(reference_frame), use_soft_alignment_(use_soft_alignment)
         {
-            this->set_tolerance_degrees(tolerance);
+            this->set_dead_and_huber_degrees(deadband_deg, huber_deg);
         // Set dimension
         this->set_dimension(index_t(1));
         // Initialise frame jacobian matrix
@@ -255,44 +255,36 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             const model_t &model, const std::string &frame,
             const AlignAxisType &axis,
             const std::string &reference_frame = "universe",
-            double tolerance_degrees = 5.0)
+            double deadband_deg = 10.0, double huber_deg = 10.0)
         {
             return std::make_shared<AlignAxisTask>(model, frame, axis,
-                                                   reference_frame, tolerance_degrees, true);
+                                                   reference_frame, deadband_deg, huber_deg, true);
         }
 
-        /**
-         * @brief Set soft alignment tolerance in degrees
-         *
-         * @param degrees Misalignment angle in degrees at which the error transitions
-         *        from quadratic to linear behavior
-         */
-        void set_tolerance_degrees(double degrees)
+        // call this once to configure tolerances
+        void set_dead_and_huber_degrees(double dead_deg, double huber_deg)
         {
-            double radians = degrees * M_PI / 180.0;
-            tolerance_ = 1.0 - std::cos(radians);
-        }
+            double dead_rad = dead_deg * M_PI / 180.0;
+            double huber_rad = huber_deg * M_PI / 180.0;
+            dead_raw_ = 1.0 - std::cos(dead_rad);
+            huber_raw_ = 1.0 - std::cos(huber_rad);
 
-        /**
-         * @brief Get current tolerance as degrees
-         *
-         * @return Misalignment angle in degrees
-         */
-        double get_tolerance_degrees() const
-        {
-            return std::acos(1.0 - tolerance_) * 180.0 / M_PI;
+            if (huber_raw_ <= dead_raw_)
+            {
+                // enforce huber > dead
+                huber_raw_ = dead_raw_ + 1e-6;
+            }
         }
 
         /**
          * @brief Enable/disable soft alignment behavior
          *
          * @param enable True to enable soft alignment, false for original behavior
-         * @param tolerance Threshold for quadratic-to-linear transition
          */
-        void set_soft_alignment(bool enable, double tolerance = 0.1)
+        void set_soft_alignment(bool enable, double deadband_deg = 10.0, double huber_deg = 10.0)
         {
             use_soft_alignment_ = enable;
-            tolerance_ = tolerance;
+            set_dead_and_huber_degrees(deadband_deg, huber_deg);
         }
 
         /**
@@ -310,24 +302,35 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
         Eigen::Ref<const vector3_t> r =
             rMf.rotation().col(static_cast<Eigen::Index>(axis_));
 
-            double raw_error = 1.0 - r.dot(target.normalized());
+            if (!use_soft_alignment_)
+                return;
 
-            if (use_soft_alignment_)
+            const double dot_rt = r.dot(target.normalized());
+            const double raw_error = 1.0 - dot_rt; // in [0, 2]
+
+            // deadzone + Huber-like shaping with continuity
+            if (raw_error <= dead_raw_)
+                {
+                // fully inactive
+                e << 0.0;
+                scale_factor_ = 0.0;
+            }
+            else if (raw_error <= huber_raw_)
             {
-                // Huber-like shaping
-                if (raw_error <= tolerance_)
-                {
-                    e << 0.5 * raw_error * raw_error / tolerance_; // quadratic region
-                }
-                else
-                {
-                    e << raw_error - 0.5 * tolerance_; // linear region
-                }
+                // quadratic region, shifted to start at dead_raw_
+                const double x = raw_error - dead_raw_;  // in [0, huber_raw_ - dead_raw_]
+                const double R = huber_raw_ - dead_raw_; // positive
+                e << 0.5 * (x * x) / R;                  // 0.5 * x^2 / R
+                // derivative of e wrt raw_error -> x / R
+                scale_factor_ = x / R;
             }
             else
             {
-                // Original behavior
-                e << raw_error;
+                // linear region: ensure continuity with quadratic at huber_raw_
+                const double x = raw_error - huber_raw_;
+                const double base = 0.5 * (huber_raw_ - dead_raw_);
+                e << base + x;       // slope 1 in linear tail
+                scale_factor_ = 1.0; // derivative is 1
             }
     }
 
@@ -344,31 +347,21 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
         pinocchio::getFrameJacobian(model, data, model.getFrameId(frame),
                                     pinocchio::LOCAL, frame_jacobian_);
 
-            Eigen::Ref<const vector3_t> r =
-                rMf.rotation().col(static_cast<Eigen::Index>(axis_));
-            double raw_error = 1.0 - r.dot(target.normalized());
+            // compute the geometric direction term: (axis x target)
+            const auto axis_vec = rMf.rotation().col(static_cast<Eigen::Index>(axis_));
+            if (!use_soft_alignment_)
+                return;
+            const vector3_t tnorm = target.normalized();
+            Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
 
-            // Default scaling
-            double scale_factor = 1.0;
-
-            if (use_soft_alignment_)
+            if (scale_factor_ <= 0.0)
             {
-                if (raw_error <= tolerance_)
-                {
-                    scale_factor = raw_error / tolerance_; // derivative of quadratic region
+                jac.setZero();
                 }
                 else
                 {
-                    scale_factor = 1.0; // derivative of linear region
-                }
+                jac = scale_factor_ * rot_term * (rMf.rotation() * frame_jacobian_.bottomRows(3));
             }
-
-            jac = -scale_factor *
-                  (rMf.rotation()
-                    .col(static_cast<Eigen::Index>(axis_))
-                    .cross(target.normalized()))
-                   .transpose() *
-              rMf.rotation() * frame_jacobian_.bottomRows(3);
     }
 
     /**
@@ -389,8 +382,12 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
     data_t::Matrix6x frame_jacobian_;
 
         // Soft alignment parameters
-        double tolerance_;        // Quadratic-to-linear transition
         bool use_soft_alignment_; // Enable soft alignment behavior
+
+        // in class
+        double dead_raw_ = 1e-3;  // raw error for deadzone
+        double huber_raw_ = 0.01; // raw error where quadratic->linear switch happens
+        double scale_factor_ = 1.0;
 };
 
 /**
