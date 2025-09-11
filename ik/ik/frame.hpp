@@ -230,9 +230,7 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             : Task(), axis_(axis), frame(frame), reference_frame(reference_frame), use_soft_alignment_(use_soft_alignment)
         {
             this->set_dead_and_huber_degrees(deadband_deg, huber_deg);
-        // Set dimension
         this->set_dimension(index_t(1));
-        // Initialise frame jacobian matrix
         frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
     }
 
@@ -271,7 +269,6 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
             if (huber_raw_ <= dead_raw_)
             {
-                // enforce huber > dead
                 huber_raw_ = dead_raw_ + 1e-6;
             }
         }
@@ -318,10 +315,9 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             else if (raw_error <= huber_raw_)
             {
                 // quadratic region, shifted to start at dead_raw_
-                const double x = raw_error - dead_raw_;  // in [0, huber_raw_ - dead_raw_]
-                const double R = huber_raw_ - dead_raw_; // positive
-                e << 0.5 * (x * x) / R;                  // 0.5 * x^2 / R
-                // derivative of e wrt raw_error -> x / R
+                const double x = raw_error - dead_raw_;
+                const double R = huber_raw_ - dead_raw_;
+                e << 0.5 * (x * x) / R;
                 scale_factor_ = x / R;
             }
             else
@@ -329,8 +325,8 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
                 // linear region: ensure continuity with quadratic at huber_raw_
                 const double x = raw_error - huber_raw_;
                 const double base = 0.5 * (huber_raw_ - dead_raw_);
-                e << base + x;       // slope 1 in linear tail
-                scale_factor_ = 1.0; // derivative is 1
+                e << base + x;
+                scale_factor_ = 1.0;
             }
     }
 
