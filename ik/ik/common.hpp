@@ -55,6 +55,36 @@ inline void apply_joint_clipping(const model_t &model, vector_t &q) {
         model.upperPositionLimit.cwiseMin(q.cwiseMax(model.lowerPositionLimit));
 }
 
+inline void compute_huber_loss_with_deadband(double raw_error, 
+                                             double huber_threshold, 
+                                             double deadband_threshold, 
+                                             vector_ref_t e, 
+                                             double &scale_factor_result) {
+    // deadzone + Huber-like shaping with continuity
+    if (raw_error <= deadband_threshold)
+    {
+        // fully inactive
+        e << 0.0;
+        scale_factor_result = 0.0;
+    }
+    else if (raw_error <= huber_threshold)
+    {
+        // quadratic region, shifted to start at dead_raw_
+        const double x = raw_error - deadband_threshold;
+        const double R = huber_threshold - deadband_threshold;
+        e << 0.5 * (x * x) / R;
+        scale_factor_result = x / R;
+    }
+    else
+    {
+        // linear region: ensure continuity with quadratic at huber_raw_
+        const double x = raw_error - huber_threshold;
+        const double base = 0.5 * (huber_threshold - deadband_threshold);
+        e << base + x;
+        scale_factor_result = 1.0;
+    }
+}
+
 // Default solver parameters
 struct default_solver_parameters {
     // Maximum number of iterations to perform

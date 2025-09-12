@@ -284,8 +284,8 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             set_dead_and_huber_degrees(deadband_deg, huber_deg);
         }
 
-        /**
-         * @brief Computes the task error between the current and target frame
+    /**
+    * @brief Computes the task error between the current and target frame
      * configurations.
      */
     void compute_error(const model_t &model, data_t &data,
@@ -304,30 +304,9 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
             const double dot_rt = r.dot(target.normalized());
             const double raw_error = 1.0 - dot_rt; // in [0, 2]
-
-            // deadzone + Huber-like shaping with continuity
-            if (raw_error <= dead_raw_)
-                {
-                // fully inactive
-                e << 0.0;
-                scale_factor_ = 0.0;
-            }
-            else if (raw_error <= huber_raw_)
-            {
-                // quadratic region, shifted to start at dead_raw_
-                const double x = raw_error - dead_raw_;
-                const double R = huber_raw_ - dead_raw_;
-                e << 0.5 * (x * x) / R;
-                scale_factor_ = x / R;
-            }
-            else
-            {
-                // linear region: ensure continuity with quadratic at huber_raw_
-                const double x = raw_error - huber_raw_;
-                const double base = 0.5 * (huber_raw_ - dead_raw_);
-                e << base + x;
-                scale_factor_ = 1.0;
-            }
+            
+            //Modifies e & scale_factor
+            compute_huber_loss_with_deadband(raw_error, huber_raw_, dead_raw_, e, scale_factor_);
     }
 
     /**
@@ -350,12 +329,10 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             const vector3_t tnorm = target.normalized();
             Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
 
-            if (scale_factor_ <= 0.0)
-            {
+            if (scale_factor_ <= 0.0) {
                 jac.setZero();
-                }
-                else
-                {
+            }
+            else {
                 jac = scale_factor_ * rot_term * (rMf.rotation() * frame_jacobian_.bottomRows(3));
             }
     }
