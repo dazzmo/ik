@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cmath> // cos, M_PI
 #include <pinocchio/algorithm/frames.hpp>
 
 #include "ik/constraint.hpp"
@@ -205,99 +205,136 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
  * @brief Task designed to align a particular axis of an end-effector frame to,
  * irrespective of the other axes of the frame. Appropriate for contact tasks
  * where having the end-effector aligned with the contact normal is essential.
+     * Now includes soft alignment (Huber-style loss) for reduced stiffness.
  *
  */
-class AlignAxisTask : public Task {
+    class AlignAxisTask : public Task
+    {
    public:
     /**
      * @brief Constructor for creating a frame task.
      *
      * @param model The Pinocchio model of the robot.
      * @param frame The name of the frame for which the task is defined.
-     * @param type The type of task (default: `KinematicType::Full`).
+         * @param axis The axis to align.
      * @param reference_frame The name of the reference frame for the task
      * (default: "universe").
+         * @param tolerance Threshold for quadratic-to-linear transition in degrees (default: 0.1).
+         * @param use_soft_alignment Enable soft alignment behavior (default: false for backward compatibility).
      */
     AlignAxisTask(const model_t &model, const std::string &frame,
                   const AlignAxisType &axis,
-                  const std::string &reference_frame = "universe")
-        : Task(), axis_(axis), frame(frame), reference_frame(reference_frame) {
-        // Set dimension
+                      const std::string &reference_frame = "universe",
+                      double deadband_deg = 10.0, double huber_deg = 10.0,
+                      bool use_soft_alignment = false)
+            : Task(), axis_(axis), frame(frame), reference_frame(reference_frame), use_soft_alignment_(use_soft_alignment)
+        {
+            this->set_dead_and_huber_degrees(deadband_deg, huber_deg);
         this->set_dimension(index_t(1));
-        // Initialise frame jacobian matrix
         frame_jacobian_ = pinocchio::Data::Matrix6x::Zero(6, model.nv);
     }
 
     /**
      * @brief Factory method to create a shared pointer to a frame task.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param frame The name of the frame for which the task is defined.
-     * @param type The type of task (default: `KinematicType::Full`).
-     * @param reference_frame The name of the reference frame for the task
-     * (default: "universe").
-     * @return A shared pointer to the created `FrameTask` instance.
      */
     static std::shared_ptr<AlignAxisTask> create(
         const model_t &model, const std::string &frame,
         const AlignAxisType &axis,
-        const std::string &reference_frame = "universe") {
+            const std::string &reference_frame = "universe")
+        {
         return std::make_shared<AlignAxisTask>(model, frame, axis,
                                                reference_frame);
     }
 
     /**
-     * @brief Computes the tasj error between the current and target frame
+         * @brief Factory method to create a shared pointer to a soft alignment task.
+         */
+        static std::shared_ptr<AlignAxisTask> create_soft(
+            const model_t &model, const std::string &frame,
+            const AlignAxisType &axis,
+            const std::string &reference_frame = "universe",
+            double deadband_deg = 10.0, double huber_deg = 10.0)
+        {
+            return std::make_shared<AlignAxisTask>(model, frame, axis,
+                                                   reference_frame, deadband_deg, huber_deg, true);
+        }
+
+        // call this once to configure tolerances
+        void set_dead_and_huber_degrees(double dead_deg, double huber_deg)
+        {
+            double dead_rad = dead_deg * M_PI / 180.0;
+            double huber_rad = huber_deg * M_PI / 180.0;
+            dead_raw_ = 1.0 - std::cos(dead_rad);
+            huber_raw_ = 1.0 - std::cos(huber_rad);
+
+            if (huber_raw_ <= dead_raw_)
+            {
+                huber_raw_ = dead_raw_ + 1e-6;
+            }
+        }
+
+        /**
+         * @brief Enable/disable soft alignment behavior
+         *
+         * @param enable True to enable soft alignment, false for original behavior
+         */
+        void set_soft_alignment(bool enable, double deadband_deg = 10.0, double huber_deg = 10.0)
+        {
+            use_soft_alignment_ = enable;
+            set_dead_and_huber_degrees(deadband_deg, huber_deg);
+        }
+
+    /**
+    * @brief Computes the task error between the current and target frame
      * configurations.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
-     * @param e The vector to store the computed error.
      */
     void compute_error(const model_t &model, data_t &data,
-                       const vector_const_ref_t q, vector_ref_t e) override {
+                           const vector_const_ref_t q, vector_ref_t e) override
+        {
         // Compute the frame error
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-        // Reference Frame to World
-        const auto &oMr =
-            get_transform_frame_to_world(model, data, reference_frame);
-        // Frame to Reference Frame
+            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
-        // Get axis of frame with respect to the reference frame
+
         Eigen::Ref<const vector3_t> r =
             rMf.rotation().col(static_cast<Eigen::Index>(axis_));
 
-        // Compute alignment error
-        e << 1.0 - r.dot(target.normalized());
+            if (!use_soft_alignment_)
+                return;
+
+            const double dot_rt = r.dot(target.normalized());
+            const double raw_error = 1.0 - dot_rt; // in [0, 2]
+            
+            //Modifies e & scale_factor
+            compute_huber_loss_with_deadband(raw_error, huber_raw_, dead_raw_, e, scale_factor_);
     }
 
     /**
      * @brief Computes the task Jacobian matrix.
-     *
-     * @param model The Pinocchio model of the robot.
-     * @param data The Pinocchio data structure for the robot.
-     * @param jac The matrix to store the computed Jacobian.
      */
     void compute_jacobian(const model_t &model, data_t &data,
-                          matrix_ref_t jac) override {
-        // Compute the frame error
+                              matrix_ref_t jac) override
+        {
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-        // Reference Frame to World
-        const auto &oMr =
-            get_transform_frame_to_world(model, data, reference_frame);
-        // Frame to Reference Frame
+            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
 
-        // Compute Jacobian of end-effector in local frame
         pinocchio::getFrameJacobian(model, data, model.getFrameId(frame),
                                     pinocchio::LOCAL, frame_jacobian_);
 
-        // Create task Jacobian
-        jac = -(rMf.rotation()
-                    .col(static_cast<Eigen::Index>(axis_))
-                    .cross(target.normalized()))
-                   .transpose() *
-              rMf.rotation() * frame_jacobian_.bottomRows(3);
+            // compute the geometric direction term: (axis x target)
+            const auto axis_vec = rMf.rotation().col(static_cast<Eigen::Index>(axis_));
+            if (!use_soft_alignment_)
+                return;
+            const vector3_t tnorm = target.normalized();
+            Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
+
+            if (scale_factor_ <= 0.0) {
+                jac.setZero();
+            }
+            else {
+                jac = scale_factor_ * rot_term * (rMf.rotation() * frame_jacobian_.bottomRows(3));
+            }
     }
 
     /**
@@ -316,6 +353,14 @@ class AlignAxisTask : public Task {
     string_t reference_frame;
     // Matrix to compute the frame jacobians of the task
     data_t::Matrix6x frame_jacobian_;
+
+        // Soft alignment parameters
+        bool use_soft_alignment_; // Enable soft alignment behavior
+
+        // in class
+        double dead_raw_ = 1e-3;  // raw error for deadzone
+        double huber_raw_ = 0.01; // raw error where quadratic->linear switch happens
+        double scale_factor_ = 1.0;
 };
 
 /**
