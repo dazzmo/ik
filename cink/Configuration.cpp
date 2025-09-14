@@ -69,6 +69,7 @@ const Configuration::Matrix6x &Configuration::getJointJacobian(
     if (index == model_->joints.size()) {
         assert("ERROR: Joint does not exist!");
     }
+    jacobian_.setZero();
     pinocchio::getJointJacobian(*model_, *data_, index, reference_frame,
                                 jacobian_);
     return jacobian_;
@@ -80,6 +81,7 @@ const Configuration::Matrix6x &Configuration::getFrameJacobian(
     if (index == model_->frames.size()) {
         assert("ERROR: Frame does not exist!");
     }
+    jacobian_.setZero();
     pinocchio::getFrameJacobian(*model_, *data_, index, reference_frame,
                                 jacobian_);
     return jacobian_;

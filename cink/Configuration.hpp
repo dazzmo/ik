@@ -72,7 +72,7 @@ class Configuration {
     Vector q0_;
     Vector q_;
 
-    Matrix6x jacobian_;
+    mutable Matrix6x jacobian_;
 };
 
 }  // namespace cink

@@ -29,8 +29,7 @@ int main(int argc, char **argv) {
     auto pgdata = std::make_shared<pinocchio::GeometryData>(*pgmodel);
 
     // Create configuration
-    auto cfg = cink::Configuration(
-        pmodel, pdata, Eigen::VectorXd::Zero(model.nq), pgmodel, pgdata);
+    auto cfg = cink::Configuration(model, Eigen::VectorXd::Zero(model.nq));
 
     cink::String ee_frame = "tool0";
     auto q = pinocchio::randomConfiguration(model);
@@ -45,13 +44,11 @@ int main(int argc, char **argv) {
 
     frame_task->setTargetFromConfiguration(cfg);
     pinocchio::SE3 T = frame_task->getTarget();
-    T.translation().x() += 0.01;
+    T.translation().z() += -0.1;
     frame_task->setTarget(T);
-    frame_task->setOrientationCost(1e-1);
-    frame_task->setLevenbergMarquardtDamping(1e-1);
+    frame_task->setLevenbergMarquardtDamping(1e-6);
 
-    auto q_limit = std::make_shared<cink::ConfigurationLimit>(
-        cfg, Eigen::MatrixXd::Identity(model.nv, model.nv));
+    auto q_limit = std::make_shared<cink::ConfigurationLimit>(cfg);
 
     auto v_limit = std::make_shared<cink::VelocityLimit>(
         cfg, Eigen::MatrixXd::Identity(model.nv, model.nv), model.velocityLimit,
@@ -61,6 +58,7 @@ int main(int argc, char **argv) {
 
     auto com = std::make_shared<cink::CentreOfMassTask>();
     com->setTargetFromConfiguration(cfg);
+    com->setWeighting(1e-3);
 
     auto self_collisions =
         std::make_shared<cink::SelfCollisionBarrier>(cfg, 10);
@@ -78,9 +76,9 @@ int main(int argc, char **argv) {
     // Compute the new error
 
     solver.setDamping(1e-6);
-    for (int i = 0; i < 20; ++i) {
-        auto dv = solver.solve(cfg, 0.1);
-        cfg.integrateInPlace(dv, 0.1);
+    for (int i = 0; i < 1000; ++i) {
+        auto dv = solver.solve(cfg, 1.0);
+        cfg.integrateInPlace(dv, 1.0);
     }
     // Assess the error
     Eigen::MatrixXd J = Eigen::MatrixXd::Zero(6, model.nv);
