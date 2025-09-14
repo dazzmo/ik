@@ -28,10 +28,11 @@ void TaskAbstract::addToQPObjective(const Configuration &cfg,
     const Matrix J = computeJacobian(cfg);
     const Vector e = computeError(cfg);
     const Vector We = W * e;
+    const Matrix WJ = W * J;
 
-    H += J.transpose() * W * J;
+    H += WJ.transpose() * WJ;
     H.diagonal().array() += getLevenbergMarquardtDamping() * We.dot(We);
-    g += J.transpose() * W * e;
+    g += WJ.transpose() * We;
 }
 
 void TaskAbstract::computeQPObjective(const Configuration &cfg,

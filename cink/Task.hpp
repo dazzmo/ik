@@ -15,15 +15,21 @@ namespace cink {
  */
 class TaskAbstract {
    public:
+    static constexpr double DEFAULT_TOLERANCE = 1e-3;
+
     using Vector = Eigen::VectorX<Real>;
     using Matrix = Eigen::MatrixX<Real>;
 
     Size getDimension() const { return dimension_; }
+
     const Vector &getWeighting() const { return weighting_; }
     void setWeighting(const Vector &weighting) { weighting_ = weighting; }
     void setWeighting(const Real &weighting) {
         weighting_.setConstant(weighting);
     }
+
+    const Real &getTolerance() const { return tolerance_; }
+    void setTolerance(const Real &tolerance) { tolerance_ = tolerance; }
 
     void setLevenbergMarquardtDamping(const Real &value) {
         lm_damping_ = value;
@@ -60,18 +66,26 @@ class TaskAbstract {
 
    protected:
     TaskAbstract()
-        : dimension_(0), weighting_(Vector::Zero(0)), lm_damping_(0.0) {}
+        : dimension_(0),
+          weighting_(Vector::Zero(0)),
+          tolerance_(Real(0)),
+          lm_damping_(Real(0)) {}
     TaskAbstract(const Size &dimension)
         : dimension_(dimension),
           weighting_(Vector::Ones(dimension)),
-          lm_damping_(0.0) {}
+          tolerance_(DEFAULT_TOLERANCE),
+          lm_damping_(Real(0)) {}
 
     Vector &getWeighting() { return weighting_; }
 
    private:
+    /// @brief Dimension of the error-space for the task
     Size dimension_;
     /// @brief The weighting vector
     Vector weighting_;
+    /// @brief The tolerances for the task to be considered satisfied
+    Real tolerance_;
+    /// @brief Levenburg Marquadt damping factor
     Real lm_damping_;
 };
 

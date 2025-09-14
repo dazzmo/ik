@@ -4,6 +4,18 @@
 
 namespace cink {
 
+void FrameTask::setPositionMask(bool x, bool y, bool z) {
+    mask_[0] = x ? 1.0 : 0.0;
+    mask_[1] = y ? 1.0 : 0.0;
+    mask_[2] = z ? 1.0 : 0.0;
+}
+
+void FrameTask::setOrientationMask(bool x, bool y, bool z) {
+    mask_[3] = x ? 1.0 : 0.0;
+    mask_[4] = y ? 1.0 : 0.0;
+    mask_[5] = z ? 1.0 : 0.0;
+}
+
 void FrameTask::setPositionCost(const Eigen::Vector3<Real> &cost) {
     this->getWeighting().topRows(3) = cost;
 }
@@ -27,7 +39,7 @@ void FrameTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
     auto fMt = oMf.actInv(oMt);
     // Compute error between target frame and the current frame of the
     // system
-    e = pinocchio::log6(fMt).toVector();
+    e = mask_.asDiagonal() * pinocchio::log6(fMt).toVector();
 }
 
 void FrameTask::computeJacobian(const Configuration &cfg,
@@ -42,12 +54,17 @@ void FrameTask::computeJacobian(const Configuration &cfg,
     // Construct jacobian of the logarithm map
     pinocchio::Data::Matrix6 Jlog;
     pinocchio::Jlog6(tMf, Jlog);
+
     // Compute Jacobian of end-effector in local frame
-    J = -Jlog * cfg.getFrameJacobian(cfg.model().getFrameId(this->frame()));
+    J = (-Jlog * cfg.getFrameJacobian(cfg.model().getFrameId(this->frame())));
+    // Perform masking
+    J = mask_.asDiagonal() * J;
 }
 
 void FrameTask::setTargetFromConfiguration(const Configuration &cfg) {
     this->setTarget(cfg.getTransformFrameToWorld(this->frame()));
 }
 
-}  // namespace ik
+
+
+}  // namespace cink

@@ -16,11 +16,33 @@ namespace cink {
  * positions or orientations).
  */
 class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
+    static constexpr int DIMENSION = 6;
+
    public:
     FrameTask(const String &frame)
-        : Task<pinocchio::SE3Tpl<Real>>(6), frame_(frame) {}
+        : Task<pinocchio::SE3Tpl<Real>>(DIMENSION),
+          frame_(frame),
+          mask_(Eigen::Vector<double, DIMENSION>::Ones()) {}
 
     const String &frame() const { return frame_; }
+
+    /**
+     * @brief Enables or disables directions of the frame task's position.
+     *
+     * @param x
+     * @param y
+     * @param z
+     */
+    void setPositionMask(bool x, bool y, bool z) ;
+
+    /**
+     * @brief Enables or disables directions of the frame task's position.
+     *
+     * @param x
+     * @param y
+     * @param z
+     */
+    void setOrientationMask(bool x, bool y, bool z) ;
 
     /**
      * @brief Set the cost of the position error
@@ -63,6 +85,7 @@ class FrameTask : public Task<pinocchio::SE3Tpl<Real>> {
 
    private:
     std::string frame_;
+    Eigen::Vector<double, DIMENSION> mask_;
 };
 
-}  // namespace ik
+}  // namespace cink
