@@ -293,20 +293,21 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
         {
         // Compute the frame error
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
+        const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
 
         Eigen::Ref<const vector3_t> r =
             rMf.rotation().col(static_cast<Eigen::Index>(axis_));
 
-            if (!use_soft_alignment_)
-                return;
-
-            const double dot_rt = r.dot(target.normalized());
-            const double raw_error = 1.0 - dot_rt; // in [0, 2]
-            
-            //Modifies e & scale_factor
-            compute_huber_loss_with_deadband(raw_error, huber_raw_, dead_raw_, e, scale_factor_);
+            if (use_soft_alignment_) {
+                const double dot_rt = r.dot(target.normalized());
+                const double raw_error = 1.0 - dot_rt; // in [0, 2]
+                //Modifies e & scale_factor
+                compute_huber_loss_with_deadband(raw_error, huber_raw_, dead_raw_, e, scale_factor_);
+            }
+            else {
+                e << 1.0 - r.dot(target.normalized());
+            }
     }
 
     /**
@@ -316,7 +317,7 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
                               matrix_ref_t jac) override
         {
         const auto &oMf = get_transform_frame_to_world(model, data, frame);
-            const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
+        const auto &oMr = get_transform_frame_to_world(model, data, reference_frame);
         auto rMf = oMr.actInv(oMf);
 
         pinocchio::getFrameJacobian(model, data, model.getFrameId(frame),
@@ -324,16 +325,22 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
             // compute the geometric direction term: (axis x target)
             const auto axis_vec = rMf.rotation().col(static_cast<Eigen::Index>(axis_));
-            if (!use_soft_alignment_)
-                return;
-            const vector3_t tnorm = target.normalized();
-            Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
-
-            if (scale_factor_ <= 0.0) {
-                jac.setZero();
+            if (use_soft_alignment_) {
+                const vector3_t tnorm = target.normalized();
+                Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
+                if (scale_factor_ <= 0.0) {
+                    jac.setZero();
+                }
+                else {
+                    jac = scale_factor_ * rot_term * (rMf.rotation() * frame_jacobian_.bottomRows(3));
+                }
             }
             else {
-                jac = scale_factor_ * rot_term * (rMf.rotation() * frame_jacobian_.bottomRows(3));
+                jac = -(rMf.rotation()
+                            .col(static_cast<Eigen::Index>(axis_))
+                            .cross(target.normalized()))
+                            .transpose() *
+                        rMf.rotation() * frame_jacobian_.bottomRows(3);
             }
     }
 
