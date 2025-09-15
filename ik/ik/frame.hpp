@@ -298,15 +298,15 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
         Eigen::Ref<const vector3_t> r =
             rMf.rotation().col(static_cast<Eigen::Index>(axis_));
-
+            const vector3_t tnorm = target.normalized();
             if (use_soft_alignment_) {
-                const double dot_rt = r.dot(target.normalized());
+                const double dot_rt = r.dot(tnorm);
                 const double raw_error = 1.0 - dot_rt; // in [0, 2]
                 //Modifies e & scale_factor
                 compute_huber_loss_with_deadband(raw_error, huber_raw_, dead_raw_, e, scale_factor_);
             }
             else {
-                e << 1.0 - r.dot(target.normalized());
+                e << 1.0 - r.dot(tnorm);
             }
     }
 
@@ -325,8 +325,8 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
 
             // compute the geometric direction term: (axis x target)
             const auto axis_vec = rMf.rotation().col(static_cast<Eigen::Index>(axis_));
+            const vector3_t tnorm = target.normalized();
             if (use_soft_alignment_) {
-                const vector3_t tnorm = target.normalized();
                 Eigen::RowVector3d rot_term = -(axis_vec.cross(tnorm)).transpose(); // 1x3
                 if (scale_factor_ <= 0.0) {
                     jac.setZero();
@@ -338,7 +338,7 @@ enum class AlignAxisType { AxisX = 0, AxisY = 1, AxisZ = 2 };
             else {
                 jac = -(rMf.rotation()
                             .col(static_cast<Eigen::Index>(axis_))
-                            .cross(target.normalized()))
+                            .cross(tnorm))
                             .transpose() *
                         rMf.rotation() * frame_jacobian_.bottomRows(3);
             }
