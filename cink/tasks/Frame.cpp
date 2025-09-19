@@ -17,18 +17,27 @@ void FrameTask::setOrientationMask(bool x, bool y, bool z) {
 }
 
 void FrameTask::setPositionCost(const Eigen::Vector3<Real> &cost) {
-    this->getWeighting().topRows(3) = cost;
+    Eigen::VectorXd w = this->getWeighting();
+    w.topRows<3>() = cost;
+    this->setWeighting(w);
 }
 
 void FrameTask::setPositionCost(const Real &cost) {
-    this->getWeighting().topRows(3).setConstant(cost);
+    Eigen::VectorXd w = this->getWeighting();
+    w.topRows<3>().setConstant(cost);
+    this->setWeighting(w);
 }
 
 void FrameTask::setOrientationCost(const Eigen::Vector3<Real> &cost) {
-    this->getWeighting().bottomRows(3) = cost;
+    Eigen::VectorXd w = this->getWeighting();
+    w.bottomRows<3>() = cost;
+    this->setWeighting(w);
 }
+
 void FrameTask::setOrientationCost(const Real &cost) {
-    this->getWeighting().bottomRows(3).setConstant(cost);
+    Eigen::VectorXd w = this->getWeighting();
+    w.bottomRows<3>().setConstant(cost);
+    this->setWeighting(w);
 }
 
 void FrameTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
@@ -64,7 +73,5 @@ void FrameTask::computeJacobian(const Configuration &cfg,
 void FrameTask::setTargetFromConfiguration(const Configuration &cfg) {
     this->setTarget(cfg.getTransformFrameToWorld(this->frame()));
 }
-
-
 
 }  // namespace cink

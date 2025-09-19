@@ -76,8 +76,6 @@ class TaskAbstract {
           tolerance_(DEFAULT_TOLERANCE),
           lm_damping_(Real(0)) {}
 
-    Vector &getWeighting() { return weighting_; }
-
    private:
     /// @brief Dimension of the error-space for the task
     Size dimension_;
