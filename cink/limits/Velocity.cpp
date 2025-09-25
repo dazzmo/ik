@@ -11,8 +11,8 @@ VelocityLimit::VelocityLimit(const Configuration &cfg, const Matrix &projection,
 
 void VelocityLimit::computeQPConstraints(const Configuration &cfg,
                                          Eigen::Ref<Matrix> A,
-                                         Eigen::Ref<Vector> ubA,
                                          Eigen::Ref<Vector> lbA,
+                                         Eigen::Ref<Vector> ubA,
                                          const Real &dt) {
     A = projection_;
     ubA = dt * getLimitGain() * ub_;

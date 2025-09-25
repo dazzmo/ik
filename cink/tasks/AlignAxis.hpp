@@ -18,6 +18,17 @@ class AlignAxisTask : public Task<Eigen::Vector3d> {
 
     const String &frame() const { return frame_; }
 
+    /**
+     * @brief Computes the angular distance between the target normal and the
+     * axis of the frame.
+     *
+     * @param cfg
+     * @param degrees Whether to return the error in degrees (true) or radians
+     * (false) (default = false)
+     */
+    double computeAngularError(const Configuration &cfg, 
+                             bool degrees = false);
+
     void computeError(const Configuration &cfg, Eigen::Ref<Vector> e) override;
 
     void computeJacobian(const Configuration &cfg,
@@ -32,4 +43,4 @@ class AlignAxisTask : public Task<Eigen::Vector3d> {
     Eigen::Vector3d getAxisInWorldFrame(const pinocchio::SE3 &oMf,
                                         const AlignAxisType &axis) const;
 };
-}  // namespace ik
+}  // namespace cink

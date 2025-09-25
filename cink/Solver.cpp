@@ -8,6 +8,9 @@ void InverseKinematicsSolver::init(const Configuration &cfg,
     // Create quadratic program
     // Determine size of A matrix
     Size nc = 0;
+    for (const auto &task : tasks_) {
+        if (task->isConstraint()) nc += task->getDimension();
+    }
     for (const auto &limit : limits_) {
         nc += limit->getDimension();
     }
@@ -30,20 +33,27 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
     }
 
     data_->reset();
-    // Construct inverse kinematics
+
+    Size cidx = 0;
 
     for (const auto &task : tasks_) {
         // Determine the error and Jacobian
-        task->addToQPObjective(cfg, data_->H, data_->g);
+        if (task->isConstraint()) {
+            Size m = task->getDimension();
+            task->computeQPConstraints(cfg, data_->A.middleRows(cidx, m),
+                                       data_->lbA.middleRows(cidx, m),
+                                       data_->ubA.middleRows(cidx, m));
+        } else {
+            task->addToQPObjective(cfg, data_->H, data_->g);
+        }
     }
 
-    Size cidx = 0;
     for (const auto &limit : limits_) {
         // Determine the error and Jacobian
         Size m = limit->getDimension();
         limit->computeQPConstraints(cfg, data_->A.middleRows(cidx, m),
-                                    data_->ubA.middleRows(cidx, m),
-                                    data_->lbA.middleRows(cidx, m), dt);
+                                    data_->lbA.middleRows(cidx, m),
+                                    data_->ubA.middleRows(cidx, m), dt);
         cidx += m;
     }
 
@@ -51,8 +61,8 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
         // Determine the error and Jacobian
         Size m = barrier->getDimension();
         barrier->computeQPConstraints(cfg, data_->A.middleRows(cidx, m),
-                                      data_->ubA.middleRows(cidx, m),
-                                      data_->lbA.middleRows(cidx, m), dt);
+                                      data_->lbA.middleRows(cidx, m),
+                                      data_->ubA.middleRows(cidx, m), dt);
         cidx += m;
     }
 
@@ -63,7 +73,7 @@ InverseKinematicsSolver::Vector InverseKinematicsSolver::solve(
     qp_->solve(data_->H, data_->g, data_->A, data_->ubA, data_->lbA,
                cfg.model().velocityLimit, -cfg.model().velocityLimit);
     // Return the change in velocity needed
-    return qp_->getPrimalSolution();
+    return qp_->getPrimalSolution() / dt;
 };
 
 }  // namespace cink

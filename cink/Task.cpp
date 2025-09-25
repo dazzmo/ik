@@ -30,15 +30,27 @@ void TaskAbstract::addToQPObjective(const Configuration &cfg,
     const Vector We = W * e;
     const Matrix WJ = W * J;
 
-    H += WJ.transpose() * WJ;
+    H += this->getGain() * WJ.transpose() * WJ;
     H.diagonal().array() += getLevenbergMarquardtDamping() * We.dot(We);
-    g += WJ.transpose() * We;
+    g += this->getGain() * WJ.transpose() * We;
 }
 
 void TaskAbstract::computeQPObjective(const Configuration &cfg,
                                       Eigen::Ref<Matrix> H,
                                       Eigen::Ref<Vector> g) {
     addToQPObjective(cfg, H, g);
+}
+
+void TaskAbstract::computeQPConstraints(const Configuration &cfg,
+                                       Eigen::Ref<Matrix> A,
+                                       Eigen::Ref<Vector> lbA,
+                                       Eigen::Ref<Vector> ubA) {
+    const Matrix J = this->getGain() * computeJacobian(cfg);
+    const Vector e = this->getGain() * computeError(cfg);
+
+    A = J;
+    lbA = -e;
+    ubA = -e;
 }
 
 }  // namespace cink

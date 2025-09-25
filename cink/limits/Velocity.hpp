@@ -16,7 +16,7 @@ class VelocityLimit : public LimitAbstract {
                   const Vector &ub, const Vector &lb);
 
     void computeQPConstraints(const Configuration &cfg, Eigen::Ref<Matrix> A,
-                              Eigen::Ref<Vector> ubA, Eigen::Ref<Vector> lbA,
+                              Eigen::Ref<Vector> lbA, Eigen::Ref<Vector> ubA,
                               const Real &dt) override;
 
    private:

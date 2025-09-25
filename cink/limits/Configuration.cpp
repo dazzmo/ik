@@ -32,8 +32,8 @@ ConfigurationLimit::ConfigurationLimit(const Configuration &cfg)
 
 void ConfigurationLimit::computeQPConstraints(const Configuration &cfg,
                                               Eigen::Ref<Matrix> A,
-                                              Eigen::Ref<Vector> ubA,
                                               Eigen::Ref<Vector> lbA,
+                                              Eigen::Ref<Vector> ubA,
                                               const Real &dt) {
     A = dt * projection_;
     ubA = getLimitGain() *
