@@ -24,6 +24,11 @@ limits/Velocity.cpp
 barriers/SelfCollision.cpp
 )
 
+# Normalise CasADi target name (robotpkg uses `casadi`, upstream uses `casadi::casadi`)
+if (TARGET casadi AND NOT TARGET casadi::casadi)
+  add_library(casadi::casadi ALIAS casadi)
+endif()
+
 SET(${PROJECT_NAME}_LIBRARIES
 Eigen3::Eigen
 casadi::casadi

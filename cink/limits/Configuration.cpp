@@ -35,7 +35,7 @@ void ConfigurationLimit::computeQPConstraints(const Configuration &cfg,
                                               Eigen::Ref<Vector> lbA,
                                               Eigen::Ref<Vector> ubA,
                                               const Real &dt) {
-    A = dt * projection_;
+    A = projection_;
     ubA = getLimitGain() *
           pinocchio::difference(cfg.model(), cfg.configuration(),
                                 cfg.model().upperPositionLimit)(indices_);
