@@ -1,53 +1,55 @@
 
 #include "cink/tasks/AlignAxis.hpp"
 
+#include <iostream>
 namespace cink {
 
-AlignAxisTask::AlignAxisTask(const String &frame, const AlignAxisType &axis)
-    : Task<Eigen::Vector3d>(1), frame_(frame), axis_(axis) {}
+AlignAxisTask::AlignAxisTask(const String& frame, const Eigen::Vector3d& axis)
+    : Task<Eigen::Vector3d>(2), frame_(frame), axis_(axis) {}
 
-void AlignAxisTask::computeError(const Configuration &cfg,
-                                 Eigen::Ref<Vector> e) {
-    // Compute the frame error
-    const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
-    // Get axis of frame with respect to the reference frame
-    const Eigen::Vector3d r = getAxisInWorldFrame(oMf, axis_);
-
-    // Compute alignment error
-    e << 1.0 - r.dot(this->getTarget().normalized());
+Eigen::Matrix3d AlignAxisTask::createAxisFrame(
+    const Configuration& cfg, const Eigen::Vector3d& axis) const {
+    const auto& oMf = cfg.getTransformFrameToWorld(this->frame());
+    Eigen::Matrix3d oRa;
+    oRa.col(0) = (oMf.rotation() * axis_).normalized();
+    oRa.col(2) = oRa.col(0).cross(this->getTarget()).normalized();
+    oRa.col(1) = oRa.col(2).cross(oRa.col(0));
+    return oRa;
 }
 
-double AlignAxisTask::computeAngularError(const Configuration &cfg,
+void AlignAxisTask::computeError(const Configuration& cfg,
+                                 Eigen::Ref<Vector> e) {
+    const auto oRa = createAxisFrame(cfg, axis_);
+    // Determine dot product of the axis frame's x-axis with the target world
+    // axis
+    const double v =
+        std::min(1.0, std::max(oRa.col(0).dot(this->getTarget()), -1.0));
+    // Compute alignment error
+    e << 0.0, -std::acos(v);
+}
+
+void AlignAxisTask::computeJacobian(const Configuration& cfg,
+                                    Eigen::Ref<Matrix> jac) {
+    const auto oRa = createAxisFrame(cfg, axis_);
+    const auto& frame_jacobian = cfg.getFrameJacobian(
+        cfg.getFrameIndex(this->frame()), pinocchio::WORLD);
+
+    // Create task Jacobian (only enforce in the y and z axes)
+    jac = (oRa.transpose() * frame_jacobian.bottomRows(3)).bottomRows<2>();
+}
+
+double AlignAxisTask::computeAngularError(const Configuration& cfg,
                                           bool degrees) {
-    // Compute the frame error
-    const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
-    // Get axis of frame with respect to the reference frame
-    const Eigen::Vector3d r = getAxisInWorldFrame(oMf, axis_);
-    // Get the normalised target vector
-    const Eigen::Vector3d t = this->getTarget().normalized();
-    // Return the error either in degrees or radians (note: r and t are
-    // normalised)
-    const double angle_rad = acos(r.dot(t));
+    // Create axis transform
+    const auto oRa = createAxisFrame(cfg, axis_);
+    // Determine dot product of the axis frame's x-axis with the target world
+    // axis
+    const double v =
+        std::min(1.0, std::max(oRa.col(0).dot(this->getTarget()), -1.0));
+    // Compute alignment error
+    const double angle_rad = std::acos(v);
     constexpr double rad_to_deg = 180.0 / M_PI;
     return degrees ? rad_to_deg * angle_rad : angle_rad;
-}
-
-void AlignAxisTask::computeJacobian(const Configuration &cfg,
-                                    Eigen::Ref<Matrix> jac) {
-    // Compute the frame error
-    const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
-    const auto &frame_jacobian =
-        cfg.getFrameJacobian(cfg.getFrameIndex(this->frame()));
-    const Eigen::Vector3d r = getAxisInWorldFrame(oMf, axis_);
-
-    // Create task Jacobian
-    jac = -(r.cross(this->getTarget().normalized())).transpose() *
-          oMf.rotation() * frame_jacobian.bottomRows(3);
-}
-
-Eigen::Vector3d AlignAxisTask::getAxisInWorldFrame(
-    const pinocchio::SE3 &oMf, const AlignAxisType &axis) const {
-    return oMf.rotation().col(static_cast<Eigen::Index>(axis));
 }
 
 }  // namespace cink
