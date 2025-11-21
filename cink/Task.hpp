@@ -113,7 +113,7 @@ class TaskAbstract {
    protected:
     TaskAbstract()
         : dimension_(0),
-          gain_(Real(0)),
+          gain_(Real(1)),
           weighting_(Vector::Zero(0)),
           tolerance_(Real(0)),
           lm_damping_(Real(0)) {}

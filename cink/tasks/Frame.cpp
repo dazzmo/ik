@@ -16,45 +16,45 @@ void FrameTask::setOrientationMask(bool x, bool y, bool z) {
     mask_[5] = z ? 1.0 : 0.0;
 }
 
-void FrameTask::setPositionCost(const Eigen::Vector3<Real> &cost) {
+void FrameTask::setPositionCost(const Eigen::Vector3<Real>& cost) {
     Eigen::VectorXd w = this->getWeighting();
     w.topRows<3>() = cost;
     this->setWeighting(w);
 }
 
-void FrameTask::setPositionCost(const Real &cost) {
+void FrameTask::setPositionCost(const Real& cost) {
     Eigen::VectorXd w = this->getWeighting();
     w.topRows<3>().setConstant(cost);
     this->setWeighting(w);
 }
 
-void FrameTask::setOrientationCost(const Eigen::Vector3<Real> &cost) {
+void FrameTask::setOrientationCost(const Eigen::Vector3<Real>& cost) {
     Eigen::VectorXd w = this->getWeighting();
     w.bottomRows<3>() = cost;
     this->setWeighting(w);
 }
 
-void FrameTask::setOrientationCost(const Real &cost) {
+void FrameTask::setOrientationCost(const Real& cost) {
     Eigen::VectorXd w = this->getWeighting();
     w.bottomRows<3>().setConstant(cost);
     this->setWeighting(w);
 }
 
-void FrameTask::computeError(const Configuration &cfg, Eigen::Ref<Vector> e) {
-    const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
+void FrameTask::computeError(const Configuration& cfg, Eigen::Ref<Vector> e) {
+    const auto& oMf = cfg.getTransformFrameToWorld(this->frame());
     // Target to World
     auto oMt = this->getTarget();
     // Target to Frame
     auto fMt = oMf.actInv(oMt);
     // Compute error between target frame and the current frame of the
     // system
-    e = mask_.asDiagonal() * pinocchio::log6(fMt).toVector();
+    e = pinocchio::log6(fMt).toVector();
 }
 
-void FrameTask::computeJacobian(const Configuration &cfg,
+void FrameTask::computeJacobian(const Configuration& cfg,
                                 Eigen::Ref<Matrix> J) {
     // Frame to World
-    const auto &oMf = cfg.getTransformFrameToWorld(this->frame());
+    const auto& oMf = cfg.getTransformFrameToWorld(this->frame());
     // Target to World
     auto oMt = this->getTarget();
     // Frame to Target
@@ -67,10 +67,10 @@ void FrameTask::computeJacobian(const Configuration &cfg,
     // Compute Jacobian of end-effector in local frame
     J = (-Jlog * cfg.getFrameJacobian(cfg.model().getFrameId(this->frame())));
     // Perform masking
-    J = mask_.asDiagonal() * J;
+    J = J;
 }
 
-void FrameTask::setTargetFromConfiguration(const Configuration &cfg) {
+void FrameTask::setTargetFromConfiguration(const Configuration& cfg) {
     this->setTarget(cfg.getTransformFrameToWorld(this->frame()));
 }
 
