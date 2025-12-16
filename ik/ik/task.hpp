@@ -1,8 +1,5 @@
 #pragma once
 
-#define GLOG_USE_GLOG_EXPORT
-#include <glog/logging.h>
-
 #include <Eigen/Core>
 
 #include "ik/common.hpp"
@@ -19,14 +16,14 @@ namespace ik {
 class Task {
    public:
     Task() : dimension_(index_t(0)) {}
-    Task(const index_t &dimension) : dimension_(dimension) {
+    Task(const index_t& dimension) : dimension_(dimension) {
         set_dimension(dimension);
     }
 
-    virtual void compute_error(const model_t &model, data_t &data,
+    virtual void compute_error(const model_t& model, data_t& data,
                                const vector_const_ref_t q, vector_ref_t e) = 0;
 
-    virtual void compute_jacobian(const model_t &model, data_t &data,
+    virtual void compute_jacobian(const model_t& model, data_t& data,
                                   matrix_ref_t jac) = 0;
 
     /**
@@ -37,7 +34,7 @@ class Task {
      */
     index_t dimension() const { return dimension_; }
 
-    vector_t &weighting() { return weighting_; }
+    vector_t& weighting() { return weighting_; }
 
    protected:
     /**
@@ -45,7 +42,7 @@ class Task {
      *
      * @param dimension
      */
-    void set_dimension(const index_t &dimension) {
+    void set_dimension(const index_t& dimension) {
         dimension_ = dimension;
         weighting_ = vector_t::Ones(dimension);
     }

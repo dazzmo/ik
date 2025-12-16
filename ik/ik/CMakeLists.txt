@@ -14,7 +14,6 @@ problem.cpp
 SET(${PROJECT_NAME}_LIBRARIES
 Eigen3::Eigen
 pinocchio::pinocchio
-glog
 )
 
 include(GNUInstallDirs)

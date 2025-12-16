@@ -27,11 +27,6 @@
 ik requires the following third-party libraries in order to be built and installed.
 * [pinocchio]()
 
-For testing purposes we have (this is later be a toggle-able option):
-* [googletest](https://github.com/google/googletest)
-* [glog](https://github.com/google/glog)
-
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Installation

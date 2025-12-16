@@ -52,11 +52,6 @@ vector_t dls(InverseKinematicsProblem &problem, const vector_t &q0,
         data.dq =
             -data.N * (data.Jt.transpose() * data.JJ.ldlt().solve(data.et));
 
-        VLOG(10) << "dls: it = " << i;
-        VLOG(10) << "dls: e = " << data.et.transpose();
-        VLOG(10) << "dls: q = " << data.q.transpose();
-        VLOG(10) << "dls: dq = " << data.dq.transpose();
-        VLOG(15) << "dls: J = " << data.Jt;
 
         if (visitor.should_stop(problem, data.e, data.dq)) {
             data.success = true;
