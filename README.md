@@ -25,10 +25,6 @@
 
 ### Prerequisites
 ik requires the following third-party libraries in order to be built and installed.
-<<<<<<< HEAD
-* [pinocchio]()
-
-=======
 * Pinocchio - for kinodynamic calculations such as frame placements and inverse kinematics
 * CasADi - for representing and solving optimisation problems with freely available solvers
 * ndcurves - A generic curve library that allows you to design and constrain polynomial curves in time, useful for representing robotic end-effector motions.
@@ -37,7 +33,7 @@ ik requires the following third-party libraries in order to be built and install
 
 ### Installing Prerequisites Through Robotpkg
 If packages were previously installed via other methods, Simply remove the pinocchio package from ROS (sudo apt remove ros-humble-pinocchio). I would also recommend removing CasADi from the system if downloaded, which can be done by deleting the /usr/local/lib & /usr/local/include files.
-
+#### Install
 1. Install the robotpkg packages using the following commands: 
     ```sh
     sudo apt install -qqy lsb-release curl && \
@@ -65,7 +61,11 @@ If packages were previously installed via other methods, Simply remove the pinoc
     cmake .. -DCMAKE_INSTALL_PREFIX="/opt/openrobots/" && \
     make -j$(nproc) && sudo make install
     ```
->>>>>>> c43cebf (Added install instructions for prerequisites via robotpkg)
+#### Uninstall
+  1. Remove the ```/opt/openrobots``` folder from the system files.
+  2. Remove the recently added lines from .bashrc.
+  3. Reinstall Pinocchio via ROS and CasADi via the traditional method.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Installation
