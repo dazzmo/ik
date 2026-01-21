@@ -6,7 +6,7 @@
 <br>
 <div align="center">
 
-  <h1 align="center">Puppeteer - An Inverse Kinematics Engine</h1>
+  <h1 align="center">Inverse Kinematics Engine</h1>
 
   <p align="left">
     A work-in-progress implementation of a basic inverse kinematics engine
@@ -27,8 +27,6 @@
 ik requires the following third-party libraries in order to be built and installed.
 * Pinocchio - for kinodynamic calculations such as frame placements and inverse kinematics
 * CasADi - for representing and solving optimisation problems with freely available solvers
-* ndcurves - A generic curve library that allows you to design and constrain polynomial curves in time, useful for representing robotic end-effector motions.
-* Multicontact-API - A forked repository that helps unify a lot of the common foothold/motion planning objects into one place of access and storage.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Installing Prerequisites Through Robotpkg
@@ -43,7 +41,7 @@ If packages were previously installed via other methods, Simply remove the pinoc
     echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" \
     | sudo tee /etc/apt/sources.list.d/robotpkg.list >/dev/null && \
     sudo apt update && \
-    sudo apt install -qqy robotpkg-py3*-pinocchio robotpkg-py3*-ndcurves robotpkg-py3*-casadi robotpkg-py3*-example-robot-data
+    sudo apt install -qqy robotpkg-py3*-pinocchio robotpkg-py3*-casadi robotpkg-py3*-example-robot-data
     ```
  
 2. Update your .bashrc with the following lines:
@@ -53,13 +51,6 @@ If packages were previously installed via other methods, Simply remove the pinoc
     export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY
     export PYTHONPATH=/opt/openrobots/lib/python3.10/site-packages:$PYTHONPATH
     export CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH
-    ```
-3. Lastly, install the forked repository for the multicontact-api, installing it to the /opt/openrobots directory:
-    ```sh
-    git clone https://github.com/dazzmo/multicontact-api.git -b devel && \
-    cd multicontact-api && mkdir -p build && cd build && \ 
-    cmake .. -DCMAKE_INSTALL_PREFIX="/opt/openrobots/" && \
-    make -j$(nproc) && sudo make install
     ```
 #### Uninstall
   1. Remove the ```/opt/openrobots``` folder from the system files.
