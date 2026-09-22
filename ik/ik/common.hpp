@@ -3,8 +3,7 @@
 #include <Eigen/Core>
 // #include <casadi/casadi.hpp>
 // #include <pinocchio/autodiff/casadi.hpp>
-#include <pinocchio/multibody/data.hpp>
-#include <pinocchio/multibody/model.hpp>
+#include <pinocchio/multibody.hpp>
 
 namespace ik {
 
