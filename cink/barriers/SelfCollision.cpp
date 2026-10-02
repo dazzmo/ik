@@ -16,10 +16,9 @@ void SelfCollisionBarrier::computeBarrier(const Configuration &cfg,
     std::vector<std::pair<Size, Real>> pair_distance_(
         cfg.collisionModel().collisionPairs.size());
 
-    for (int k = 0; k < cfg.collisionModel().collisionPairs.size(); ++k) {
+    for (size_t k = 0; k < cfg.collisionModel().collisionPairs.size(); ++k) {
         // Assess the collision results for the pairs
-        const pinocchio::CollisionPair &cp =
-            cfg.collisionModel().collisionPairs[k];
+        // const pinocchio::CollisionPair &cp = cfg.collisionModel().collisionPairs[k];
         const auto &dr = cfg.collisionData().distanceResults[k];
 
         pair_distance_[k] = {k, dr.min_distance - min_distance_};
