@@ -4,6 +4,7 @@
 #include <pinocchio/algorithm/geometry.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
 #include <pinocchio/collision/collision.hpp>
+#include <pinocchio/collision/distance.hpp>
 
 #include "cink/Types.hpp"
 
